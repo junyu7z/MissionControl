@@ -1,0 +1,1398 @@
+  /* ------------ Tokens ------------ */
+  :root{
+    --bg: #fcfcf9;             /* Toned Background */
+    --panel: #ffffff;
+    --ink: #262626;            /* label primary */
+    --ink-2: #737373;          /* label secondary */
+    --ink-3: #a3a3a3;
+    --line: #e6e3dd;           /* subtle separator */
+    --line-strong: #cccccc;
+    --line-week: #b8b3a8;
+    --row-h: 36px;
+    --proj-head-h: 100px;
+    --sidebar-w: 320px;
+    --day-w: 72px;
+    --link: #398ae7;
+    --status-on: #34a853;
+    --status-on-bg: #d8efdc;
+    --status-risk: #faa21b;
+    --status-risk-bg: #fdebcd;
+    --status-off: #dd2222;
+    --status-off-bg: #fad7d7;
+    --today-ink: #1f1d18;
+    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 1px 1px rgba(0,0,0,.03);
+    font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-size:12px;line-height:1.35;-webkit-font-smoothing:antialiased}
+  button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+  a{color:var(--link);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* ------------ App layout ------------ */
+  .app{display:flex;flex-direction:column;height:100vh;min-width:1440px}
+
+  /* ------------ Scrollbar ------------ */
+  #boardScroll::-webkit-scrollbar{height:6px;width:6px}
+  #boardScroll::-webkit-scrollbar-track{background:transparent}
+  #boardScroll::-webkit-scrollbar-thumb{background:transparent;border-radius:3px;transition:background .2s}
+  #boardScroll.is-panning::-webkit-scrollbar-thumb{background:rgba(0,0,0,.25)}
+  #boardScroll{scrollbar-width:thin;scrollbar-color:transparent transparent}
+  #boardScroll.is-panning{scrollbar-color:rgba(0,0,0,.25) transparent}
+
+  /* ------------ TopToolbar ------------ */
+  .toolbar{
+    display:flex;align-items:center;gap:16px;height:58px;
+    padding:0 18px;background:var(--panel);
+    border-bottom:1px solid var(--line);position:relative;z-index:5;
+  }
+  .brand{display:flex;align-items:center;gap:11px;min-width:260px}
+  .brand-icon{
+    width:32px;height:32px;border-radius:7px;background:#1f1d18;color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;
+  }
+  .brand-title{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-.14px;line-height:1.15}
+  .brand-sub{font-size:10px;color:var(--ink-2);letter-spacing:.66px;text-transform:uppercase;line-height:1.3}
+
+  .seg{
+    position:absolute;left:50%;transform:translateX(-50%);
+    display:inline-flex;background:#f1efe9;border-radius:8px;padding:3px;gap:2px;
+  }
+  .seg button{
+    height:27px;padding:0 14px;border-radius:6px;font-size:12px;color:var(--ink-2);
+    display:inline-flex;align-items:center;gap:6px;font-weight:500;
+  }
+  .seg .active{background:#fff;color:var(--ink);box-shadow:var(--shadow)}
+  .seg svg{width:13px;height:13px}
+  .add-mode-seg{position:static;left:auto;transform:none;margin-bottom:14px;display:flex;width:100%}
+  .add-mode-seg button{flex:1;justify-content:center;padding:0}
+
+  .spacer{flex:1}
+
+  .right-cluster{display:flex;align-items:center;gap:8px}
+  .sprint-range{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;color:var(--ink);margin-right:4px}
+  .ico-btn,.btn{
+    height:28px;border:1px solid var(--line);border-radius:6px;
+    background:#fff;color:var(--ink);display:inline-flex;align-items:center;
+    gap:6px;padding:0 10px;font-size:12px;font-weight:500;
+  }
+  .ico-btn{padding:0;width:28px;justify-content:center}
+  #expandAllBtn{min-width:108px;justify-content:center}
+  .ico-btn:hover,.btn:hover{background:#faf8f3}
+  .ico-btn svg,.btn svg{width:13px;height:13px;stroke:var(--ink);stroke-width:1.6;fill:none}
+  .zoom-group{display:inline-flex}
+  .zoom-group .ico-btn:first-child{border-top-right-radius:0;border-bottom-right-radius:0;border-right:0}
+  .zoom-group .ico-btn:last-child{border-top-left-radius:0;border-bottom-left-radius:0}
+
+  /* ------------ Board scroller ------------ */
+  .board-scroll{flex:1;overflow-x:scroll;overflow-y:auto;background:var(--bg);position:relative;scrollbar-gutter:stable}
+  .board{padding-bottom:48px;min-height:100%;box-sizing:border-box}
+  .board-scroll.is-dragging{cursor:grabbing !important;user-select:none;-webkit-user-select:none}
+  .board-scroll.is-dragging .wi,
+  .board-scroll.is-dragging .ms-flag{cursor:grabbing !important}
+  .board{position:relative;width:max-content;min-width:100%}
+
+  /* ------------ TimelineHeader ------------ */
+  .header{
+    position:sticky;top:0;z-index:20;background:#fff;
+    border-bottom:1px solid var(--line-strong);
+    display:grid;grid-template-columns:var(--sidebar-w) 1fr;
+  }
+  .header-left{
+    display:flex;align-items:flex-end;justify-content:space-between;
+    padding:0 14px 8px;border-right:1px solid var(--line-strong);
+    position:sticky;left:0;z-index:9;background:#fff;
+  }
+  .active-projects{font-size:11px;font-weight:600;color:var(--ink-2);letter-spacing:.4px;text-transform:uppercase;display:inline-flex;align-items:center;gap:4px;cursor:pointer;user-select:none}
+  .active-projects:hover{color:var(--ink)}
+  .add-row{width:18px;height:18px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;color:var(--ink-2)}
+  .add-row:hover{background:#f1efe9;color:var(--ink)}
+
+  .header-right{display:flex;flex-direction:column}
+  .month-row{display:flex;height:18px;border-bottom:1px solid var(--line)}
+  .month-cell{
+    font-size:10px;font-weight:600;color:var(--ink-2);
+    letter-spacing:.66px;padding:3px 8px;display:flex;gap:6px;align-items:center;
+    text-transform:uppercase;border-right:1px solid var(--line);
+  }
+  .month-cell em{font-style:normal;color:var(--ink-3);font-weight:500}
+
+  .day-row{display:flex;height:40px}
+  .day{
+    width:var(--day-w);flex:0 0 var(--day-w);
+    border-right:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-size:10px;color:var(--ink-2);letter-spacing:.4px;
+    text-transform:uppercase;font-weight:500;gap:1px;
+  }
+  .day .num{font-size:14px;color:var(--ink);font-weight:600;letter-spacing:-.1px}
+  .day.weekstart{border-left:1px solid var(--line-week)}
+  .day.today{background:var(--today-ink);color:#cfcdc6}
+  .day.today .num{color:#fff}
+
+  /* Week-mode: collapse Mon..Fri into one cell that spans the whole week */
+  .board.is-week-mode .day:not(.weekstart){ display:none }
+  .board.is-week-mode .day.weekstart{
+    width:calc(var(--day-w) * 5);
+    flex:0 0 calc(var(--day-w) * 5);
+    border-left:none;
+    border-right:1px solid var(--line);
+    align-items:flex-start;
+    padding-left:6px;
+  }
+  .day .mon{display:none}
+  .board.is-week-mode .day .dow{display:none}
+  .board.is-week-mode .day .mon{display:block}
+  .board.is-week-mode .project-lane,
+  .board.is-week-mode .member-lane{
+    background-image:linear-gradient(to right, rgba(0,0,0,0.18) 1px, transparent 1px);
+    background-size:calc(var(--day-w) * 5) 100%;
+  }
+
+  .sprint-row{display:flex;height:18px;border-top:1px solid var(--line)}
+  .sprint-cell{
+    flex:0 0 calc(var(--day-w) * 5);
+    border-left:1px solid var(--line-week);
+    font-size:10px;color:var(--ink-2);letter-spacing:.66px;text-transform:uppercase;
+    display:flex;align-items:center;justify-content:center;gap:6px;font-weight:500;
+  }
+  .sprint-cell:first-child{border-left:none}
+  .sprint-cell em{font-style:normal;color:var(--ink-3)}
+  .sprint-cell .sc-abbr{display:none;align-items:center;gap:4px}
+  .board.is-tight .sprint-cell .sc-full{display:none}
+  .board.is-tight .sprint-cell .sc-abbr{display:inline-flex}
+
+  /* ------------ Project rows ------------ */
+  .project{display:grid;grid-template-columns:var(--sidebar-w) 1fr}
+  .project-side{
+    border-right:1px solid var(--line-strong);
+    background:#fff;
+    padding:12px 14px 10px;display:flex;flex-direction:column;gap:6px;
+    position:sticky;left:0;z-index:7;
+    isolation:isolate;
+  }
+  body.is-proj-dragging,
+  body.is-member-dragging{ cursor:grabbing !important; user-select:none; -webkit-user-select:none }
+  body.is-proj-dragging .wi,
+  body.is-proj-dragging .ms-flag,
+  body.is-member-dragging .wi,
+  body.is-member-dragging .ms-flag{ cursor:grabbing !important }
+  .project-group.is-proj-source{ opacity:.45 }
+  .member-row.is-member-source{ opacity:.45 }
+  .proj-drop-indicator{
+    position:fixed;height:2px;background:var(--ink);
+    z-index:9999;pointer-events:none;border-radius:1px;
+    box-shadow:0 0 0 1px rgba(255,255,255,.6);
+  }
+  .project-side::before{
+    content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--tint, #ccc);
+    z-index:1;
+  }
+  .project-side::after{
+    content:"";position:absolute;inset:0;background:var(--tint-bg, transparent);
+    z-index:-1;pointer-events:none;transition:filter .15s;
+  }
+  .project-head{display:flex;align-items:center;gap:6px}
+  .chev{width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;color:var(--ink-2);flex:0 0 14px}
+  .project-title{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-.14px;flex:1;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .status{
+    font-family:"Barlow Condensed",sans-serif;
+    font-size:12px;font-weight:700;letter-spacing:0;text-transform:uppercase;
+    width:64px;text-align:center;
+    padding:2px 0;border-radius:3px;flex:0 0 64px;
+  }
+  .status.ontrack{background:#3a9e3f;color:#fff}
+  .status.atrisk{background:#f0a500;color:#fff}
+  .status.offtrack{background:#d42020;color:#fff}
+  .status.archived{background:#8a8579;color:#fff}
+
+  .key-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-2);font-family:"IBM Plex Mono",ui-monospace,monospace;min-height:15px}
+  .key-row:empty::before{content:"";display:inline-block}
+
+  /* owner chip row (collapsed state) */
+  .owner-row{margin-top:6px;cursor:pointer}
+  .owner-chip{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:3px 8px 3px 3px;border-radius:20px;
+    background:transparent;transition:background .15s;
+    max-width:100%;overflow:hidden;
+  }
+  body:not(.is-proj-dragging) .owner-row:hover .owner-chip{background:var(--tint-bg)}
+  .owner-chip .avatar{flex:0 0 20px}
+  .owner-chip .owner-name{font-size:12px;font-weight:500;color:var(--ink);white-space:nowrap}
+  .owner-hint{
+    display:none;font-size:11px;color:var(--ink-2);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  /* Hover: when the project has other members, replace the long hint with
+     the secondary "+ N project members" count. When there are no other
+     members, fall back to the existing hint. */
+  body:not(.is-proj-dragging) .owner-row:hover .owner-chip:not(:has(.owner-extra)) .owner-hint{display:inline}
+  .owner-extra{
+    display:none;font-size:11px;color:var(--ink-2);font-weight:400;
+    white-space:nowrap;
+  }
+  body:not(.is-proj-dragging) .owner-row:hover .owner-extra{display:inline}
+
+  /* expand controls (expanded state) */
+  .expand-controls{display:flex;align-items:center;justify-content:space-between;font-size:11px;margin-top:6px;min-height:26px}
+  .show-toggle{color:var(--link);font-weight:500}
+  /* Add-Member link in expand-controls — collapsed to "+" by default,
+     expands rightward on hover so the + visually moves left and the label
+     trails it. Matches the Add Project button in the header. */
+  /* Temporarily hidden — restore when "Add member" affordance returns. */
+  .add-member{display:none}
+  .add-member--reserved{
+    color:var(--ink-2);font-weight:500;
+    display:inline-flex;align-items:center;gap:0;height:22px;padding:0 4px;
+    border-radius:4px;overflow:hidden;text-decoration:none;cursor:pointer;
+  }
+  .add-member .label{
+    display:inline-block;white-space:nowrap;overflow:hidden;
+    max-width:0;opacity:0;margin-left:0;
+    transition:max-width 200ms ease, opacity 150ms ease, margin-left 200ms ease;
+  }
+  .add-member:hover{color:var(--ink);background:#fff}
+  .add-member:hover .label{ max-width:120px;opacity:1;margin-left:4px }
+
+  /* ------------ Project timeline lane ------------ */
+  .project-lane{
+    position:relative;
+    background-image:
+      linear-gradient(to right, rgba(0,0,0,0.18) 1px, transparent 1px),
+      linear-gradient(to right, rgba(0,0,0,0.08) 1px, transparent 1px);
+    background-size: calc(var(--day-w) * 5) 100%, var(--day-w) 100%;
+    background-position: 0 0, 0 0;
+    isolation:isolate;
+  }
+  .project-lane{background-color:#f3f3ee}
+  .project-lane::before{
+    content:"";position:absolute;
+    left:var(--tint-left, 0); width:var(--tint-width, 100%);
+    top:0; bottom:0;
+    background:var(--tint-bg, transparent);
+    z-index:-1;pointer-events:none;transition:filter .15s;
+  }
+  .project-summary{
+    position:relative;height:var(--proj-head-h);
+  }
+  .week-divider{display:none}
+  .week-overlay{display:none}
+
+  /* ------------ Member rows ------------ */
+  .member-side{
+    border-right:1px solid var(--line-strong);
+    background:#fff;
+    height:var(--row-h);padding:0 14px 0 18px;display:flex;align-items:center;gap:8px;
+    position:sticky;left:0;z-index:7;
+    isolation:isolate;
+  }
+  .member-side::before{
+    content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--tint, #ccc);
+    z-index:1;
+  }
+  .member-side::after{
+    content:"";position:absolute;inset:0;background:var(--tint-bg, transparent);
+    z-index:-1;pointer-events:none;transition:filter .15s;
+  }
+  .avatar{
+    width:20px;height:20px;border-radius:50%;flex:0 0 20px;display:flex;align-items:center;justify-content:center;
+    font-size:9px;font-weight:600;color:#fff;letter-spacing:.2px;
+  }
+  .member-meta{display:flex;flex-direction:column;line-height:1.1;min-width:0}
+  .member-name{font-size:12px;font-weight:500;color:var(--ink);letter-spacing:-.05px}
+  .member-role{font-size:10px;color:var(--ink-2);text-transform:none}
+  .member-row{display:grid;grid-template-columns:var(--sidebar-w) 1fr;height:var(--row-h);position:relative;z-index:7}
+  .member-block{background-color:#f9f8f5}
+  .member-lane{
+    position:relative;
+    background-image:
+      linear-gradient(to right, rgba(0,0,0,0.18) 1px, transparent 1px),
+      linear-gradient(to right, rgba(0,0,0,0.08) 1px, transparent 1px);
+    background-size: calc(var(--day-w) * 5) 100%, var(--day-w) 100%;
+    border-bottom:1px dashed rgba(0,0,0,.05);
+    isolation:isolate;
+  }
+  .member-lane::before{
+    content:"";position:absolute;
+    left:var(--tint-left, 0); width:var(--tint-width, 100%);
+    top:0; bottom:0;
+    background:var(--tint-bg, transparent);
+    z-index:-1;pointer-events:none;transition:filter .15s;
+  }
+
+  /* ------------ Project group wrapper ------------ */
+  .project-group{position:relative;margin-bottom:4px}
+
+  /* ------------ Milestone marker ------------ */
+  .milestone{
+    position:absolute;top:8px;bottom:0;width:2px;background:var(--ms);
+    z-index:4;pointer-events:none;overflow:visible;
+    isolation:isolate;
+  }
+  .milestone::before{
+    content:"";position:absolute;
+    left:var(--card-l, -10px);
+    top:var(--card-t, -8px);
+    width:var(--card-w, 180px);
+    height:var(--card-h, 100px);
+    background:#fff;
+    border:none;
+    border-radius:0 6px 6px 0;
+    box-shadow: inset 0 0 0 2px var(--ms), 0 6px 18px rgba(0,0,0,.06);
+    opacity:0;transition:opacity .12s;
+    pointer-events:none;
+    z-index:0;
+  }
+  .milestone.is-hovered::before{ opacity:1 }
+  .milestone.is-hovered{ z-index:50 }
+  /* Drag cursor over the entire hovered milestone card. Cursor inheritance does the work
+     — pointer-events stay off so cell-hover tracking doesn't flicker. */
+  .milestone.is-hovered{cursor:grab}
+  /* Hit zone covering the whole hover card. By default pointer-events are off so
+     lane.mousemove keeps tracking hover; when a popover is open (scrim covers the
+     lane) we promote the hit zone to receive events. Sized only when hovered, so it
+     doesn't grab paint area unnecessarily in the default state. */
+  .ms-hit{
+    position:absolute;
+    left:0;top:0;width:0;height:0;
+    pointer-events:none;
+  }
+  .milestone.is-hovered .ms-hit{
+    left:var(--card-l, -10px);
+    top:var(--card-t, -8px);
+    width:var(--card-w, 180px);
+    height:var(--card-h, 100px);
+  }
+  .ms-flag{
+    position:absolute;left:0;top:0;
+    background:var(--ms);color:#fff;
+    font-family:"Barlow Condensed",sans-serif;font-size:11px;font-weight:700;
+    letter-spacing:.5px;text-transform:uppercase;
+    padding:5px 20px 5px 8px;line-height:1;white-space:nowrap;
+    clip-path:polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
+    max-width:240px;
+    overflow:hidden;text-overflow:ellipsis;
+    pointer-events:auto;
+  }
+  .milestone.is-hovered .ms-flag{ max-width:360px; overflow:hidden; text-overflow:ellipsis }
+  .ms-title{
+    position:absolute;left:8px;top:33px;
+    font-size:12px;font-weight:600;color:var(--ink);
+    white-space:nowrap;line-height:1.3;
+    max-width:228px;
+    overflow:hidden;text-overflow:ellipsis;
+  }
+  .ms-desc{
+    position:absolute;left:8px;top:51px;
+    font-size:10px;color:var(--ink-2);white-space:nowrap;
+    max-width:228px;
+    overflow:hidden;text-overflow:ellipsis;
+  }
+  .milestone.is-hovered .ms-title,
+  .milestone.is-hovered .ms-desc{ max-width:348px; overflow:hidden; text-overflow:ellipsis }
+
+  /* ------------ Work item bar ------------ */
+  .wi{
+    position:absolute;top:8px;height:20px;
+    display:flex;align-items:center;padding:0 6px;
+    font-size:11px;color:var(--ink);font-weight:500;
+    white-space:nowrap;
+    z-index:2;cursor:grab;
+  }
+  .wi::before{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    /* Translucent tint only — when the bar overlaps an OFF cell, the hatch
+       texture behind shows through the tint. */
+    background:var(--wi-bg);
+    border-radius:4px;
+  }
+  .wi::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    border:1px solid var(--wi-bd);border-radius:4px;
+  }
+  .wi{overflow:clip}
+  .wi:hover::after,
+  .wi.is-dragging::after{border-color:rgba(0,0,0,.45)}
+
+  /* OFF-day hatch is drawn by per-lane SVGs (.lane-hatch). Each SVG owns its
+     own <pattern> definition, and alignHatchOverlays() sets patternTransform
+     to translate(-globalX, -globalY) so every lane's pattern is anchored at
+     the same global origin (the .rows top-left). All hatched rects across
+     all lanes therefore tile from one shared imaginary pattern grid — no
+     rasterization drift, no sub-pixel offset. */
+  .lane-leave{
+    position:absolute;top:0;bottom:0;pointer-events:none;
+    background:transparent;
+    z-index:0;
+  }
+  .lane-hatch{
+    position:absolute;left:0;top:0;width:100%;height:100%;
+    pointer-events:none;
+    z-index:0;
+    overflow:visible;
+    color:#e6e6e6;
+    transition:color .15s;
+  }
+  /* Per-bar hatch overlay, clipped by the work-item's overflow:clip so the
+     tinted stripes only appear inside the bar. Sits above the bar's tint
+     fill but below the label text. Color matches the hover-state stripe so
+     the overlap reads as the project hue without flooding the bar. */
+  .wi-hatch{
+    position:absolute;left:0;top:0;width:100%;height:100%;
+    pointer-events:none;
+    overflow:visible;
+    color:color-mix(in srgb, var(--tint, #e6e6e6) 50%, #ffffff);
+    transition:color .15s;
+  }
+  /* While the bar is being moved or resized the wi-hatch is regenerated in
+     the drag handler so the OFF-day stripes stay aligned with the cells the
+     bar is currently overlapping. */
+  /* Per-row segment of a project's milestone vertical line. The outer
+     .milestone (z=4) is hidden behind member-row's stacking context;
+     each row draws its own line inside .member-lane so the marker reads
+     above the OFF-day hatch (z=0) but below the wi label (which sits
+     inside .wi z=2 and visually overlays the line as it crosses a bar). */
+  .member-lane > .ms-line{
+    position:absolute;top:0;bottom:0;width:2px;
+    z-index:1;pointer-events:none;
+  }
+  /* During a milestone drag the outer .milestone moves with the cursor (and is
+     promoted via .is-dragging z-index:30 to read above row content), but the
+     per-row segments stay at the original idx until the drop commits and the
+     row re-renders. Hide them while any milestone is being dragged so the
+     stale lines don't double-up beside the moving marker. */
+  body:has(.milestone.is-dragging) .member-lane > .ms-line{display:none}
+  .lane-hatch.lane-hatch--dark{color:#dcdcdc}
+  /* In project view, OFF-cell hatch stripes pick up a faint version of the
+     project tint so the dark diagonals read as the brand hue against the
+     tinted lane background — stronger than the cell tint behind, but
+     softer than the wi-hatch overlay inside a bar. Team view keeps the
+     neutral gray since its lanes aren't tinted. */
+  .board:not(.team-board) .lane-hatch{
+    color:color-mix(in srgb, var(--tint, #e6e6e6) 22%, #ffffff);
+  }
+  /* The tinted layer is clipped to the project's duration so OFF cells
+     outside [--tint-left, --tint-width] don't pick up the project hue.
+     A sibling .lane-hatch--gray-base SVG paints the same OFF stripes in
+     neutral gray underneath — visible only where the tinted layer is
+     clipped away. */
+  .board:not(.team-board) .lane-hatch:not(.lane-hatch--gray-base){
+    clip-path: inset(0 calc(100% - var(--tint-left, 0px) - var(--tint-width, 100%)) 0 var(--tint-left, 0px));
+  }
+  .lane-hatch.lane-hatch--gray-base{color:#e6e6e6 !important}
+  /* On row/project hover, the hatch stripes adopt a softened version of the
+     project tint — only slightly darker than the resting #ececec, just
+     enough to read as the brand hue without flooding the cell. While dragging
+     a work item, hover follows the source row only (not the cursor). */
+  body:not(.is-proj-dragging):not(.is-item-dragging) .member-row:hover .lane-hatch,
+  .member-row.is-drag-source-row .lane-hatch{
+    color:color-mix(in srgb, var(--tint, #ececec) 35%, #ffffff);
+  }
+  /* Mirror the row-hover treatment for the per-bar hatch (wi-hatch) so the
+     OFF-day stripes inside any work item in the highlighted row brighten in
+     sync with the lane-hatch. */
+  body:not(.is-proj-dragging):not(.is-item-dragging) .member-row:hover .wi-hatch,
+  .member-row.is-drag-source-row .wi-hatch{
+    color:color-mix(in srgb, var(--tint, #ececec) 75%, #ffffff);
+  }
+  .wi .wi-label{flex:0 1 auto;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    position:sticky;left:calc(var(--sidebar-w) + 6px)}
+  .wi .wi-handle{
+    position:absolute;top:0;bottom:0;width:5px;
+    cursor:ew-resize;opacity:0;background:rgba(0,0,0,.18);
+  }
+  .wi .wi-handle.l{left:0;border-radius:4px 0 0 4px}
+  .wi .wi-handle.r{right:0;border-radius:0 4px 0 4px}
+  .wi:hover .wi-handle{opacity:1}
+  .wi.is-dragging .wi-handle{opacity:1}
+
+  /* milestone hover */
+  .milestone{transition:filter .12s}
+  .milestone.is-hovered{filter:brightness(1.06)}
+  .milestone .ms-flag{cursor:grab}
+  .ms-tooltip{
+    position:absolute;left:var(--card-l, 0);
+    top:calc(var(--card-t, -8px) - 4px);
+    transform:translateY(-100%);
+    background:#1f1d18;color:#fff;
+    border-radius:4px;padding:4px 8px;font-size:10px;
+    letter-spacing:.3px;white-space:nowrap;
+    opacity:0;pointer-events:none;transition:opacity .12s;
+    box-shadow:0 2px 6px rgba(0,0,0,.18);
+  }
+  .milestone.is-hovered .ms-tooltip{opacity:1;transition:opacity .12s .4s}
+  .ms-tooltip strong{display:block;font-weight:600}
+
+  /* row hover — bump tint saturation only on the background pseudos,
+     so text and inner content stay unaffected. Disabled while dragging a
+     project AND while dragging/resizing a work item (in the latter case the
+     source row stays highlighted via .is-drag-source-row, see below). */
+  body:not(.is-proj-dragging):not(.is-item-dragging) .project:hover .project-side::after,
+  body:not(.is-proj-dragging):not(.is-item-dragging) .project:hover .project-lane::before,
+  body:not(.is-proj-dragging):not(.is-item-dragging) .member-row:hover .member-side::after,
+  body:not(.is-proj-dragging):not(.is-item-dragging) .member-row:hover .member-lane::before,
+  /* Force the source row's highlight regardless of cursor position. Set
+     during item drag and held until the cursor leaves the row, so the
+     post-release re-render doesn't flicker the hover state off. */
+  .member-row.is-drag-source-row .member-side::after,
+  .member-row.is-drag-source-row .member-lane::before{
+    filter: saturate(2.6);
+  }
+  /* hovering the project card (left sidebar) highlights only the project
+     summary row — member rows stay at their idle tint so the project header
+     reads as the focused element. */
+  body:not(.is-proj-dragging):not(.is-item-dragging) .project-group:has(.project-side:hover) .project-side::after,
+  body:not(.is-proj-dragging):not(.is-item-dragging) .project-group:has(.project-side:hover) .project-lane::before{
+    filter: saturate(2.6);
+  }
+  /* Project view: deepen the hover tint further so the highlighted row reads
+     distinctly against the resting tint. The base rule above only intensifies
+     chroma via filter:saturate, but the resting bgMember is alpha 0.07 — too
+     translucent for saturate alone to register. Override the background with
+     a heavier-alpha mix of --tint so the hover state actually reads. Scoped
+     to .board:not(.team-board) so team view keeps its existing behavior. */
+  body:not(.is-proj-dragging):not(.is-item-dragging) .board:not(.team-board) .project:hover .project-side::after,
+  body:not(.is-proj-dragging):not(.is-item-dragging) .board:not(.team-board) .project:hover .project-lane::before,
+  body:not(.is-proj-dragging):not(.is-item-dragging) .board:not(.team-board) .member-row:hover .member-side::after,
+  body:not(.is-proj-dragging):not(.is-item-dragging) .board:not(.team-board) .member-row:hover .member-lane::before,
+  body:not(.is-proj-dragging):not(.is-item-dragging) .board:not(.team-board) .project-group:has(.project-side:hover) .project-side::after,
+  body:not(.is-proj-dragging):not(.is-item-dragging) .board:not(.team-board) .project-group:has(.project-side:hover) .project-lane::before,
+  /* Source-row override (project view) — held across the post-release
+     re-render to avoid hover flicker. */
+  .board:not(.team-board) .member-row.is-drag-source-row .member-side::after,
+  .board:not(.team-board) .member-row.is-drag-source-row .member-lane::before{
+    background:color-mix(in srgb, var(--tint, #ccc) 22%, transparent);
+    filter:none;
+  }
+
+  /* timeline cell hover overlay + add affordance */
+  .cell-hover{
+    position:absolute;top:0;bottom:0;
+    background:rgba(0,0,0,.045);
+    pointer-events:none;
+    display:none;z-index:0;
+  }
+  .cell-hover.is-active{display:block}
+  .cell-hover .add-btn{
+    pointer-events:auto;position:absolute;
+    left:50%;top:50%;transform:translate(-50%,-50%);
+    width:auto;height:auto;padding:8px 10px;background:none;border:0;box-shadow:none;
+    font-size:16px;line-height:1;color:var(--ink-2);font-weight:500;
+    cursor:pointer;
+  }
+  .cell-hover .add-btn:hover{color:var(--ink)}
+  .cell-hover.is-occupied .add-btn{display:none}
+
+  /* Body-level tooltip so it can escape sticky sidebar / overflow clipping */
+  .floating-tip{
+    position:fixed;background:#1f1d18;color:#fff;
+    padding:4px 8px;border-radius:4px;
+    font-size:11px;letter-spacing:.3px;white-space:nowrap;
+    opacity:0;pointer-events:none;transition:opacity 50ms;
+    box-shadow:0 2px 6px rgba(0,0,0,.18);
+    z-index:10000;transform:translate(-50%,-100%);
+  }
+  /* Appear-delay (400ms) is JS-driven so a warm hand-off can skip it. */
+  .floating-tip.show{opacity:1;transition:opacity 120ms}
+  .floating-tip.multiline{transform:none;line-height:1.4;white-space:normal;max-width:260px}
+  .floating-tip.multiline strong{display:block;font-weight:600}
+  .floating-tip.multiline .tip-hint{display:block;margin-top:3px;color:inherit;font-size:10.5px;letter-spacing:.2px}
+  /* Anchored mode: JS computes exact top/left from a target rect (above-by-
+     default, flipped below if no room, horizontally clamped to viewport).
+     Disable both default transforms so the position is taken at face value. */
+  .floating-tip.tip-anchored{transform:none}
+
+  /* ------------ Today marker ------------ */
+  .today-marker{
+    position:absolute;top:0;bottom:0;width:1px;border:none;
+    z-index:6;pointer-events:none;
+  }
+  .today-marker .tm-line{
+    position:absolute;top:0;bottom:0;left:0;width:1px;
+    background: repeating-linear-gradient(
+      to bottom,
+      rgba(31,29,24,0.55) 0px, rgba(31,29,24,0.55) 8px,
+      transparent 8px, transparent 10px
+    );
+    transform:scaleX(0.5);
+    transform-origin:left center;
+  }
+  .today-marker::before{
+    content:"";position:absolute;left:50%;transform:translateX(-50%);width:0;height:0;
+    border-left:6px solid transparent;border-right:6px solid transparent;
+    top:0;border-top:6px solid #1f1d18;
+  }
+  /* Bottom marker (down arrow + NOW label) is rendered as a separate fixed
+     element pinned to the bottom of the visible scroll viewport, so it stays
+     just above the footer regardless of how tall the project list grows. */
+  .now-floor{
+    position:fixed;z-index:7;pointer-events:none;
+    width:0;height:0;
+  }
+  .now-floor .tm-arrow{
+    position:absolute;left:0;bottom:0;width:0;height:0;
+    border-left:6px solid transparent;border-right:6px solid transparent;
+    border-bottom:6px solid #1f1d18;transform:translateX(-50%);
+  }
+  .now-date{
+    position:absolute;left:6px;bottom:22px;font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:11px;color:var(--ink-2);white-space:nowrap;pointer-events:none;display:none;
+  }
+  .now-floor.is-week-mode .now-date{display:block}
+  .now-label{
+    position:absolute;left:6px;bottom:6px;font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:11px;color:var(--ink-2);white-space:nowrap;pointer-events:none;
+  }
+
+  /* ------------ Footer ------------ */
+  .footer{
+    height:28px;border-top:1px solid var(--line);background:var(--panel);
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 18px;font-size:11px;color:var(--ink-2);
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+  }
+  .footer .center{color:var(--ink-2)}
+  .kbd{
+    display:inline-block;border:1px solid var(--line-strong);
+    border-radius:4px;padding:1px 6px;font-size:10px;color:var(--ink);
+    background:#fff;margin:0 2px;
+  }
+
+  /* owner tooltip — matches the milestone tooltip style */
+  .owner-row{position:relative}
+  .tooltip{display:none}  /* legacy inline tooltip, replaced by body-level .floating-tip */
+
+  /* ------------ Modal / scrim ------------ */
+  .scrim{position:fixed;inset:0;background:rgba(31,29,24,.18);z-index:200;display:flex;align-items:center;justify-content:center}
+  .modal{
+    background:#fff;border:1px solid var(--line-strong);border-radius:6px;
+    width:420px;max-width:calc(100vw - 32px);box-shadow:0 4px 16px rgba(0,0,0,.08);
+    font-size:12px;
+  }
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .modal-title{font-size:13px;font-weight:600;color:var(--ink)}
+  .modal-close{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--ink-2)}
+  .modal-close:hover{background:#f1efe9;color:var(--ink)}
+  .modal-body{padding:12px}
+  .modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:#fafaf6;border-radius:0 0 6px 6px}
+  .modal-foot.confirm-foot{justify-content:space-between !important;align-items:center;gap:10px}
+  .modal-foot.confirm-foot .msg{font-size:12px;color:var(--ink-2);flex:1;text-align:left}
+  .modal-foot.confirm-foot .confirm-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+
+  .tabs{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:12px}
+  .tabs button{padding:6px 10px;font-size:11px;font-weight:500;color:var(--ink-2);border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tabs button.active{color:var(--ink);border-bottom-color:var(--ink)}
+
+  .field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;position:relative}
+  .field label{font-size:10px;font-weight:600;color:var(--ink-2);letter-spacing:.4px;text-transform:uppercase}
+  .field input,.field select,.field textarea{
+    border:1px solid var(--line-strong);border-radius:4px;background:#fff;
+    padding:5px 7px;font:inherit;color:var(--ink);font-size:12px;outline:none;
+    width:100%;box-sizing:border-box;min-width:0;
+  }
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:#1f1d18}
+  .field textarea{resize:vertical;min-height:48px;font-family:inherit}
+  .field .hint{font-size:10px;color:var(--ink-3)}
+  .field .req{color:var(--status-off);margin-left:2px}
+  .field-row{display:flex;gap:8px}
+  .field-row > .field{flex:1}
+  .field .err{font-size:10px;color:var(--status-off)}
+
+  .btn-primary{
+    height:26px;padding:0 12px;border-radius:4px;background:#1f1d18;color:#fff;
+    font-weight:500;font-size:12px;border:1px solid #1f1d18;display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn-primary:hover{background:#000}
+  .btn-primary:disabled{background:#a3a3a3;border-color:#a3a3a3;cursor:not-allowed}
+  .btn-secondary{
+    height:26px;padding:0 10px;border-radius:4px;background:#fff;color:var(--ink);
+    border:1px solid var(--line-strong);font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn-secondary:hover{background:#faf8f3}
+  .btn-danger{
+    height:26px;padding:0 10px;border-radius:4px;background:#fff;color:var(--status-off);
+    border:1px solid var(--status-off);font-size:12px;font-weight:500;
+  }
+  .btn-danger:hover{background:var(--status-off-bg)}
+
+  /* Member chip multi-select */
+  .chips{display:flex;flex-wrap:wrap;gap:4px;padding:4px;border:1px solid var(--line-strong);border-radius:4px;background:#fff;min-height:30px;align-items:center}
+  .chip{display:inline-flex;align-items:center;gap:4px;background:#f1efe9;border-radius:10px;padding:1px 4px 1px 2px;font-size:11px}
+  .chip .avatar{width:16px;height:16px;font-size:8px}
+  .chip .x{cursor:pointer;color:var(--ink-2);font-size:11px;line-height:1;padding:0 3px}
+  .chip .x:hover{color:var(--ink)}
+  .chip-add{font-size:11px;color:var(--ink-2);padding:1px 4px;cursor:pointer;align-self:center}
+  .chip-add:hover{color:var(--ink)}
+  .member-list{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+  .member-list .chip{
+    background:transparent;border-radius:20px;
+    padding:3px 6px 3px 3px;gap:6px;font-size:12px;font-weight:500;color:var(--ink);
+  }
+  .member-list .chip .avatar{width:20px;height:20px;font-size:10px;flex:0 0 20px}
+  .member-list .chip .x{opacity:0;transition:opacity .12s;font-size:13px;line-height:1;color:var(--ink-3);padding:0 0 0 2px}
+  .member-list .chip:hover{background:#f1efe9}
+  .member-list .chip:hover .x{opacity:1}
+  .member-list .chip .x:hover{color:var(--ink)}
+  .add-member-btn{
+    display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 10px 0 6px;min-width:108px;
+    border-radius:20px;background:transparent;border:1px dashed var(--line-strong);
+    color:var(--ink-2);font-size:12px;cursor:pointer;
+  }
+  .add-member-btn:hover{background:#f1efe9;color:var(--ink)}
+
+  .dropdown{
+    position:fixed;background:#fff;border:1px solid var(--line-strong);
+    border-radius:4px;box-shadow:0 4px 10px rgba(0,0,0,.06);
+    z-index:1000;min-width:160px;max-height:220px;overflow:auto;font-size:12px;
+  }
+  .dropdown .opt{padding:5px 8px;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .dropdown .opt:hover{background:#f5f3ee}
+  .dropdown .opt.disabled{opacity:.45;cursor:not-allowed;display:none}
+  .dropdown .opt .opt-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dropdown .opt .opt-current{
+    font-size:10px;color:var(--ink-2);
+    padding:1px 6px;border:1px solid var(--line);border-radius:8px;
+    text-transform:uppercase;letter-spacing:.4px;
+  }
+  .dropdown .opt.is-current{background:#fafaf6}
+  .dropdown .opt.is-current .opt-name{font-weight:600;color:var(--ink)}
+
+  /* Transparent scrim used to capture clicks behind a popover so that
+     hovering over the board doesn't trigger cell/milestone hover effects.
+     Empty cells & lanes get covered, but existing work items and milestones
+     are elevated above the scrim so the user can still hover/click them. */
+  .popover-scrim{position:fixed;inset:0;background:transparent;z-index:250}
+  /* member-row creates its own stacking context (z-index:7), so the .wi inside
+     can't simply jump above the scrim without lifting the row itself. */
+  body:has(.popover-scrim) .milestone{z-index:260}
+  /* Member rows must sit above milestones so the sticky member-side (within the row's
+     stacking context) actually covers the milestone vertical line at the sidebar column. */
+  body:has(.popover-scrim) .member-row{z-index:265}
+  /* Keep the project sidebar covering elevated milestones/work items at its column. */
+  body:has(.popover-scrim) .project-side,
+  body:has(.popover-scrim) .member-side{z-index:270}
+  /* But lifting the row would also lift its empty lane above the scrim. Make the
+     entire row transparent to pointer events so clicks fall through to the scrim
+     (closing the popover), and only re-enable events on .wi so they stay clickable. */
+  body:has(.popover-scrim) .member-row{pointer-events:none}
+  body:has(.popover-scrim) .member-row .wi{pointer-events:auto}
+  /* When a popover is open, give the milestone hover-card area a real hit element
+     so the cursor can move from flag → card padding without losing the hover state. */
+  body:has(.popover-scrim) .milestone .ms-hit{pointer-events:auto;cursor:grab}
+
+  /* Top-right trash button on instant-save popovers — aligned with the title line. */
+  .popover{position:fixed}
+  .popover-trash{
+    position:absolute;top:8px;right:8px;z-index:2;
+    width:26px;height:26px;border-radius:4px;
+    display:flex;align-items:center;justify-content:center;
+    color:var(--ink-3);background:transparent;
+  }
+  .popover-trash:hover{background:var(--status-off-bg);color:var(--status-off)}
+  .popover-trash svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round}
+
+  /* Light confirmation bar overlaying the popover's first row (member + dates). */
+  .trash-confirm{
+    position:absolute;top:6px;left:6px;right:6px;z-index:5;
+    background:var(--status-off-bg);
+    border-radius:4px;
+    padding:5px 8px 5px 10px;display:flex;align-items:center;gap:8px;
+    font-size:12px;color:var(--ink);
+  }
+  .trash-confirm .msg{flex:1;color:var(--ink)}
+  .trash-confirm .actions{display:flex;gap:6px;flex-shrink:0}
+  .trash-confirm button{
+    height:22px;padding:0 8px;border-radius:3px;font-size:11px;font-weight:500;
+    border:1px solid var(--line-strong);background:#fff;color:var(--ink);
+  }
+  .trash-confirm button.yes{background:var(--status-off);color:#fff;border-color:var(--status-off)}
+  .trash-confirm button.yes:hover{background:#b81818}
+  .trash-confirm button.no:hover{background:#faf8f3}
+
+  /* Popovers (milestone / work item) */
+  .popover{
+    position:fixed;background:#fff;border:1px solid var(--line-strong);
+    border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.08);
+    width:280px;font-size:12px;z-index:300;
+  }
+  .popover-head{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--line)}
+  .popover-title{font-size:12px;font-weight:600;color:var(--ink)}
+  .popover-body{padding:10px 16px;display:flex;flex-direction:column;gap:8px}
+  .popover-body .field{margin-bottom:0}
+  /* Inputs sit flush with their text but the box visually extends 8px outward
+     into the popover's horizontal padding, so the hover/focus border breathes
+     to the left/right of the value. */
+  .popover-body .field input,
+  .popover-body .field select,
+  .popover-body .field textarea{margin:0 -8px;padding:5px 8px;width:calc(100% + 16px)}
+  /* Display-mode fields inside popovers: show as plain text by default,
+     reveal input chrome only on hover or focus. */
+  .popover-body .field input,
+  .popover-body .field select,
+  .popover-body .field textarea{
+    border-color:transparent;background:transparent;cursor:pointer;
+    transition:border-color .12s, background .12s;
+  }
+  .popover-body .field:hover input,
+  .popover-body .field:hover select,
+  .popover-body .field:hover textarea,
+  .popover-body .field input:focus,
+  .popover-body .field select:focus,
+  .popover-body .field textarea:focus{
+    border-color:var(--line-strong);background:#fff;cursor:auto;
+  }
+  .popover-body .field input:focus,
+  .popover-body .field textarea:focus{cursor:text}
+  /* Hide the date picker's calendar icon and select arrow until hover so the
+     fields read as plain text in display mode. */
+  .popover-body .field input[type="date"]::-webkit-calendar-picker-indicator{opacity:0;transition:opacity .12s}
+  .popover-body .field:hover input[type="date"]::-webkit-calendar-picker-indicator,
+  .popover-body .field input[type="date"]:focus::-webkit-calendar-picker-indicator{opacity:.6}
+  .popover-foot{display:flex;justify-content:space-between;gap:6px;padding:8px 10px;border-top:1px solid var(--line);background:#fafaf6;border-radius:0 0 6px 6px}
+  /* Title-as-input variant: shows the work item label as the popover's first-line heading. */
+  .popover-title-input{
+    font-size:13px;font-weight:600;color:var(--ink);line-height:1.35;
+    border:none;border-radius:4px;
+    background:transparent;margin:0 -8px;padding:5px 8px;width:calc(100% + 16px);box-sizing:border-box;
+    outline:none;font-family:inherit;cursor:pointer;
+    transition:box-shadow .12s, background .12s;
+    resize:none;overflow:hidden;field-sizing:content;
+    word-break:break-word;white-space:pre-wrap;
+    display:block;
+  }
+  .popover-title-input:hover, .popover-title-input:focus{box-shadow:inset 0 0 0 1px var(--line-strong);background:#fff;cursor:text}
+
+  /* Title-as-button variant: same look as popover-title-input but used as a click target
+     to open a custom dropdown. Chevron is hidden by default and only revealed on hover. */
+  .popover-title-pick{
+    font-size:13px;font-weight:600;color:var(--ink);line-height:1.35;
+    border:none;border-radius:4px;
+    background:transparent;margin:0 -8px;padding:5px 22px 5px 8px;width:calc(100% + 16px);box-sizing:border-box;
+    outline:none;font-family:inherit;cursor:pointer;text-align:left;
+    background-image:none;background-repeat:no-repeat;background-position:right 6px center;
+    transition:box-shadow .12s, background .12s, background-image .12s;
+    display:block;
+  }
+  .popover-title-pick:hover, .popover-title-pick.is-open{
+    box-shadow:inset 0 0 0 1px var(--line-strong);background-color:#fff;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 4l3 3 3-3' fill='none' stroke='%23888' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  }
+
+  /* Inline assignee picker — avatar-only; full name shown via floating tooltip on hover. */
+  .assignee-pick{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:24px;height:24px;flex:0 0 24px;
+    margin:0;padding:3px;border:none;border-radius:4px;
+    background:transparent;cursor:pointer;
+    transition:box-shadow .12s, background .12s;
+  }
+  .assignee-pick:hover{box-shadow:inset 0 0 0 1px var(--line-strong);background:#fff}
+  .assignee-pick .avatar{width:18px;height:18px;font-size:9px;flex:0 0 18px}
+  .assignee-pick .name{display:none}
+
+  /* Notes textarea inside popovers — no resize grip, auto-grow with content. */
+  .popover-body .field textarea{resize:none;overflow:hidden;field-sizing:content;line-height:1.4}
+
+  /* Jira link display state: shows the parsed key as a hyperlink with a hover-only delete button. */
+  .jira-display{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px}
+  .jira-display a{color:var(--link);font-weight:500}
+  .jira-display a:hover{text-decoration:underline}
+  .jira-display .x-btn{
+    width:16px;height:16px;display:none;align-items:center;justify-content:center;
+    border-radius:3px;color:var(--ink-2);font-size:11px;line-height:1;
+  }
+  .jira-display:hover .x-btn{display:flex}
+  .jira-display .x-btn:hover{background:var(--status-off-bg);color:var(--status-off)}
+
+  /* Inline milestone "type" tag — flag-shaped (matches the timeline ms-flag). */
+  .type-tag{
+    display:inline-flex;align-items:center;
+    padding:4px 18px 4px 8px;margin-right:6px;
+    font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+    color:#fff;background:var(--tag-bg,#888);
+    border:none;cursor:pointer;
+    font-family:"Barlow Condensed",sans-serif;line-height:1;
+    clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%);
+    transition:filter .12s;
+  }
+  .type-tag:hover{filter:brightness(1.06)}
+
+  /* Duration row: two compact date buttons (custom-rendered text + hidden picker). */
+  .duration-row{display:flex;align-items:center;gap:4px;align-self:flex-start;margin-left:-8px;position:relative}
+  .duration-sep{color:var(--ink-2);font-size:12px;line-height:1}
+  .date-btn{
+    margin:0;padding:4px 6px;font:inherit;font-size:12px;color:var(--ink);
+    background:transparent;border:none;border-radius:4px;cursor:pointer;outline:none;
+    transition:background .12s, box-shadow .12s;
+    line-height:1.2;
+  }
+  .date-btn:hover,.date-btn:focus{background:#fff;box-shadow:inset 0 0 0 1px var(--line-strong)}
+  /* .date-btn variant that opens a custom dropdown — chevron only on hover/open. */
+  .date-btn.date-btn-pick{
+    padding-right:18px;
+    background-image:none;background-repeat:no-repeat;background-position:right 4px center;
+    transition:background .12s, box-shadow .12s, background-image .12s;
+  }
+  .date-btn.date-btn-pick:hover, .date-btn.date-btn-pick.is-open{
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 4l3 3 3-3' fill='none' stroke='%23888' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  }
+  .date-btn-input{position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;border:none;padding:0;margin:0}
+  .popover-foot .right{display:flex;gap:6px}
+
+  /* Right side panel */
+  .side-panel{
+    position:fixed;top:0;right:0;height:100vh;width:340px;background:#fff;
+    border-left:1px solid var(--line-strong);box-shadow:-2px 0 8px rgba(0,0,0,.04);
+    z-index:200;display:flex;flex-direction:column;font-size:12px;
+  }
+  .side-panel .panel-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line)}
+  .side-panel .panel-title{font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.4px}
+  .side-panel .panel-body{flex:1;overflow:auto;padding:12px}
+  .side-panel .panel-foot{padding:10px 12px;border-top:1px solid var(--line);display:flex;justify-content:space-between;background:#fafaf6}
+
+  .project-edit-modal .modal-body textarea[data-bind="desc"]{
+    border-color:transparent;background:transparent;cursor:pointer;
+    transition:border-color .12s, background .12s;
+    margin:0 -8px;padding:5px 8px;width:calc(100% + 16px);box-sizing:border-box;
+    resize:none;field-sizing:content;min-height:0;
+  }
+  .project-edit-modal .modal-body textarea[data-bind="desc"]:hover,
+  .project-edit-modal .modal-body textarea[data-bind="desc"]:focus{
+    border-color:var(--line-strong);background:#fff;cursor:text;
+  }
+  .project-edit-modal{width:480px}
+  /* Keep the project-edit modal scrim above the milestone popover-scrim so list
+     rows behind a popover stay hover/clickable; the popover itself (z=300) still
+     sits above this. */
+  .scrim:has(.modal.project-edit-modal){z-index:290}
+  /* While a popover is open, only milestone rows in the modal stay interactive;
+     other elements (inputs, buttons, add-milestone) are dimmed-by-events so a
+     click on them just dismisses the popover without firing their action. */
+  body:has(.popover-scrim) .modal.project-edit-modal *{pointer-events:none}
+  body:has(.popover-scrim) .modal.project-edit-modal,
+  body:has(.popover-scrim) .modal.project-edit-modal .ms-list-row,
+  body:has(.popover-scrim) .modal.project-edit-modal .ms-list-row *{pointer-events:auto}
+  .project-edit-modal{overflow:hidden;border:0}
+  .project-edit-modal .modal-color-band{height:12px}
+  .project-edit-modal .modal-body{padding:20px 24px}
+  .project-edit-modal .modal-foot{padding:12px 24px}
+  .project-edit-modal .color-swatches{gap:12px;margin-top:6px}
+  .project-edit-modal .color-swatches .sw{width:24px;height:24px}
+  .project-edit-modal .modal-body .field{margin-bottom:18px}
+  .project-edit-modal .modal-body .field-row{margin-bottom:18px}
+  .project-edit-modal .modal-body .field-row .field{margin-bottom:0}
+  .project-edit-modal .modal-body .section-head{margin-top:22px}
+  .project-edit-modal .modal-title-input{margin-bottom:14px}
+  .modal-title-input{
+    font-size:14px;font-weight:600;color:var(--ink);line-height:1.35;
+    border:none;border-radius:4px;
+    background:transparent;margin:0 -8px 4px;padding:6px 8px;width:calc(100% + 16px);box-sizing:border-box;
+    outline:none;font-family:inherit;cursor:pointer;
+    transition:box-shadow .12s, background .12s;
+    resize:none;overflow:hidden;field-sizing:content;
+    word-break:break-word;white-space:pre-wrap;
+    display:block;
+  }
+  .modal-title-input:hover,.modal-title-input:focus{box-shadow:inset 0 0 0 1px var(--line-strong);background:#fff;cursor:text}
+  .title-req-wrap{position:relative}
+  .title-req-wrap .title-req-row{
+    position:absolute;left:0;top:6px;padding:0 8px;
+    font-size:14px;font-weight:600;line-height:1.35;
+    pointer-events:none;display:flex;gap:1px;
+  }
+  .title-req-wrap .title-req-ghost{visibility:hidden;white-space:pre}
+  .title-req-wrap .title-req{color:#d42020}
+  .title-req-wrap:has(.modal-title-input:not(:placeholder-shown)) .title-req-row{display:none}
+  .owner-pick-btn{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:3px 6px 3px 3px;border-radius:20px;background:transparent;border:0;
+    font-size:12px;font-weight:500;color:var(--ink);cursor:pointer;width:fit-content;
+  }
+  .owner-pick-btn .avatar{width:20px;height:20px;font-size:10px;flex:0 0 20px}
+  .owner-pick-btn:hover{background:#f1efe9}
+  .status-pick{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:fit-content;min-width:80px;height:22px;padding:0 12px;border-radius:3px;
+    font-family:"Barlow Condensed",sans-serif;font-size:12px;font-weight:700;
+    letter-spacing:0;text-transform:uppercase;color:#fff;border:0;cursor:pointer;
+  }
+  .status-pick.ontrack{background:#3a9e3f}
+  .status-pick.atrisk{background:#f0a500}
+  .status-pick.offtrack{background:#d42020}
+  .status-pick.archived{background:#8a8579}
+  .dur-pick{
+    display:inline-flex;align-items:center;gap:4px;
+    height:24px;padding:0 10px;border-radius:4px;
+    background:#fff;border:1px solid var(--line-strong);
+    font-size:12px;color:var(--ink);cursor:pointer;width:fit-content;
+  }
+  .dur-pick:hover{background:#f1efe9}
+  .dur-pick::after{content:"▾";color:var(--ink-3);font-size:10px;margin-left:2px}
+  .dur-field{flex-direction:row;align-items:center;gap:10px}
+  .dur-field > label{margin:0;flex:0 0 auto;font-size:12px;font-weight:400;letter-spacing:0;text-transform:uppercase;color:var(--ink-3)}
+
+  .color-swatches{display:flex;gap:6px;flex-wrap:wrap}
+  .color-swatches .sw{width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid #fff;outline:1px solid var(--line-strong);outline-offset:0}
+  .color-swatches .sw.active{outline:2px solid var(--ink);outline-offset:1px}
+
+  .section-head{font-size:10px;font-weight:600;color:var(--ink-2);letter-spacing:.4px;text-transform:uppercase;margin:14px 0 6px;display:flex;justify-content:space-between;align-items:center}
+  .ms-list-row{display:flex;align-items:center;gap:8px;padding:5px 6px;border:1px solid var(--line);border-radius:4px;margin-bottom:4px;background:#fff;cursor:pointer;transition:background .12s, border-color .12s}
+  .ms-list-row:hover{background:#faf8f3;border-color:var(--line-strong)}
+  .ms-list-row.is-selected{background:#f1efe9;border-color:var(--ink-2)}
+  .ms-list-row.is-confirming:hover,
+  .ms-list-row.is-selected.is-confirming{background:var(--status-off-bg);border-color:var(--status-off)}
+  .ms-list-row .ms-dot{width:8px;height:8px;border-radius:50%;background:var(--ms,#ccc);flex:0 0 8px}
+  .ms-list-row .ms-name{flex:1;font-size:12px;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ms-list-row .ms-meta{font-size:11px;color:var(--ink-2);font-family:"IBM Plex Mono",ui-monospace,monospace}
+  .ms-list-row .x-btn{color:var(--ink-2);width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:3px}
+  .ms-list-row .x-btn:hover{color:var(--status-off);background:var(--status-off-bg)}
+  .ms-list-row.is-confirming{justify-content:space-between;background:var(--status-off-bg);border-color:var(--status-off)}
+  .ms-list-row .ms-confirm-msg{flex:1;font-size:12px;color:var(--ink)}
+  .ms-list-row .ms-confirm-actions{display:flex;gap:6px}
+  .ms-list-row .ms-confirm-actions button{
+    height:18px;padding:0 8px;border-radius:3px;font-size:11px;font-weight:500;
+    border:1px solid var(--line-strong);background:#fff;color:var(--ink);cursor:pointer;
+  }
+  .ms-list-row .ms-confirm-actions button.yes{background:var(--status-off);color:#fff;border-color:var(--status-off)}
+  .ms-list-row .ms-confirm-actions button.yes:hover{background:#b81818}
+  .ms-list-row .ms-confirm-actions button.no:hover{background:#faf8f3}
+  .add-ms-btn{
+    display:flex;align-items:center;justify-content:center;gap:6px;width:100%;
+    height:30px;padding:0 8px;border-radius:4px;
+    background:transparent;border:1px dashed var(--line-strong);
+    color:var(--ink-2);font-size:12px;cursor:pointer;margin-top:4px;
+  }
+  .add-ms-btn:hover{background:#faf8f3;color:var(--ink)}
+
+  /* Drag tooltip */
+  .drag-tip{
+    position:fixed;background:#1f1d18;color:#fff;padding:3px 8px;border-radius:3px;
+    font-size:10px;font-family:"IBM Plex Mono",ui-monospace,monospace;
+    z-index:10001;pointer-events:none;white-space:nowrap;letter-spacing:.2px;
+    box-shadow:0 2px 6px rgba(0,0,0,.18);
+  }
+  .wi.is-dragging,.milestone.is-dragging{opacity:.85;z-index:30}
+  .wi .wi-handle{cursor:ew-resize}
+  body.is-item-dragging{ user-select:none; -webkit-user-select:none }
+  /* When dragging a work item's left/right resize handle OR dragging a milestone,
+     keep the cursor as the horizontal resize arrows regardless of what's under it. */
+  body.is-item-resizing,
+  body.is-item-resizing .wi,
+  body.is-item-resizing .wi *,
+  body.is-item-resizing .milestone,
+  body.is-item-resizing .milestone *{cursor:ew-resize !important}
+
+  /* Inline jira-import loading line */
+  .jira-loading{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-2);padding:4px 0}
+  .jira-loading .spinner{width:10px;height:10px;border:1.5px solid var(--line-strong);border-top-color:var(--ink);border-radius:50%;animation:spin 700ms linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* Empty state */
+  .empty-state{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:60px 20px;text-align:center;color:var(--ink-2);
+    position:absolute;top:120px;left:0;right:0;z-index:1;
+  }
+  .empty-state .es-title{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px}
+  .empty-state .es-desc{font-size:12px;color:var(--ink-2);max-width:360px;margin:0 0 14px;line-height:1.45}
+
+  /* Add-Project icon-only button — borderless, expands rightward on hover so
+     the + visually moves left and the label trails it. */
+  .header-left .add-project-pill{
+    height:18px;padding:0 4px;border:0;border-radius:4px;
+    background:transparent;color:var(--ink);font-size:11px;font-weight:500;
+    display:inline-flex;align-items:center;gap:0;overflow:hidden;cursor:pointer;
+    align-self:end;margin-bottom:-3px;
+  }
+  .header-left .add-project-pill .label{
+    display:inline-block;white-space:nowrap;overflow:hidden;
+    max-width:0;opacity:0;margin-left:0;
+    transition:max-width 200ms ease, opacity 150ms ease, margin-left 200ms ease;
+  }
+  .header-left .add-project-pill:hover{background:#f1efe9;color:var(--ink)}
+  .header-left .add-project-pill:hover .label{ max-width:90px;opacity:1;margin-left:4px }
+
+  /* Make project title / key / status clickable */
+  .project-title,.key-row,.status{cursor:pointer}
+  .project-title:hover{text-decoration:underline;text-decoration-color:rgba(0,0,0,.3);text-underline-offset:2px}
+  .key-row:hover{color:var(--ink)}
+
+  /* ------------ Team view (reuses .project-group / .project-side / .project-lane / .member-row / .member-side / .member-lane) ------------ */
+  .team-side .project-head{gap:8px}
+  .team-side .project-head .avatar{width:24px;height:24px;font-size:10px;flex:0 0 24px}
+  .team-side .project-title{flex:0 1 auto;font-size:15px}
+  .team-side .workload-tag{font-size:12px;margin-right:auto}
+  .team-side .key-row{font-family:inherit;color:var(--ink-2);font-size:12px}
+  .team-side .team-toggle{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:4px 6px;margin-left:26px;align-self:flex-start;
+    border-radius:10px;background:transparent;
+    color:var(--ink-2);font-size:12px;line-height:1.2;
+    cursor:pointer;transition:background .12s, color .12s;
+  }
+  .team-side .team-toggle:hover{background:#f1efe9;color:var(--ink)}
+  .team-side .team-toggle .team-toggle-chev{transition:transform .15s;flex:0 0 9px}
+  .project.has-members .team-side .team-toggle .team-toggle-chev{transform:rotate(180deg)}
+  /* Neutral team-member summary background — work item bars carry the project color. */
+  .project-group.team-group .project-lane{background-color:#fff}
+  /* Match the visual weight of the lane's week-vertical gridlines (rgba 0.18, 1px). */
+  .project-group.team-group{margin-bottom:0;border-bottom:1px solid rgba(0,0,0,0.18)}
+  .member-row.team-project-row .member-side::before{
+    left:auto;right:10px;top:50%;bottom:auto;
+    width:6px;height:6px;border-radius:50%;
+    transform:translateY(-50%);
+    background:var(--tint, #ccc);
+  }
+  /* Match the project row background to the empty workload cell tone. */
+  .member-block.team-block{background-color:#f9f9f9}
+  .member-block.team-block .member-side{background:#fff}
+  /* Hide the tint background by default — only reveal on hover. */
+  .member-row.team-project-row{--cell-bg:#f9f9f9;--cell-tint:transparent}
+  .member-row.team-project-row .member-side::after,
+  .member-row.team-project-row .member-lane::before{opacity:0;transition:opacity .15s}
+  /* Suppress the opacity transition for one frame right after a drag commit
+     re-mounts the DOM, so the freshly applied .is-drag-source-row highlight
+     doesn't fade in (which would visibly flicker). */
+  .member-row.is-render-locked .member-side::after,
+  .member-row.is-render-locked .member-lane::before{transition:none !important}
+  body:not(.is-proj-dragging):not(.is-item-dragging) .member-row.team-project-row:hover .member-side::after,
+  body:not(.is-proj-dragging):not(.is-item-dragging) .member-row.team-project-row:hover .member-lane::before,
+  /* Source-row override (team view) — held across the post-release re-render. */
+  .member-row.team-project-row.is-drag-source-row .member-side::after,
+  .member-row.team-project-row.is-drag-source-row .member-lane::before{opacity:1}
+  /* Compact team rows — match the sidebar padding to the content height. */
+  .project-group.team-group .project-summary{height:76px}
+  /* Per-day workload cells — fills the full day cell, vertically split by project. */
+  .team-load-cell{
+    position:absolute;top:12px;bottom:12px;
+    width:var(--day-w);left:0;
+    box-sizing:border-box;pointer-events:none;
+    padding:0 4px;
+    /* Each cell is layout/paint-isolated so a scroll only repaints the cells
+       that actually scroll into view (the timeline has ~3500 of these and they
+       were dominating paint cost during pan). content-visibility:auto lets
+       the browser skip work for off-screen cells entirely; contain-intrinsic
+       -size reserves their layout box without forcing a measure. */
+    contain: layout paint style;
+    content-visibility: auto;
+    contain-intrinsic-size: var(--day-w) 52px;
+  }
+  .board.is-week-mode .team-load-cell{padding:0 2px}
+  .team-load-block{border-radius:6px;overflow:hidden;box-sizing:border-box;border:2px solid var(--bd,transparent);position:relative}
+  .team-load-cell.is-empty .team-load-block{background:rgba(0,0,0,0.025);cursor:pointer}
+  /* Single roaming overlay per team-summary (one overlay total, not one per
+     cell): provides BOTH the hover tint and the "+" affordance. Follows the
+     cursor via setupTeamSummaryAddHover. */
+  .team-load-add-overlay{
+    position:absolute;top:12px;bottom:12px;
+    width:var(--day-w);
+    padding:0 4px;box-sizing:border-box;
+    display:none;align-items:center;justify-content:center;
+    pointer-events:none;z-index:2;
+  }
+  .team-load-add-overlay.is-active{display:flex}
+  /* The tint sits inside the cell's content area (matching the cell's 4px
+     horizontal padding and rounded corners). Cells with actual work items
+     get a more saturated tint so the hover affordance reads strongly over
+     the colored workload stripes. When hovering a specific stripe inside a
+     multi-stripe cell, JS sets --hl-top/--hl-bottom so the tint clips to
+     just that stripe's vertical band — see setupTeamSummaryAddHover. */
+  .team-load-add-overlay::before{
+    content:'';position:absolute;
+    top:var(--hl-top, 0);bottom:var(--hl-bottom, 0);
+    left:4px;right:4px;
+    background:rgba(0,0,0,0.045);
+    border-radius:6px;
+    pointer-events:none;
+  }
+  /* Occupied cells: instead of darkening, lift the underlying stripe color's
+     saturation and brightness so the hovered work item feels emphasized,
+     not muted. backdrop-filter only takes effect when there's content
+     beneath the pseudo-element — empty cells fall back to the gray tint. */
+  .team-load-add-overlay.is-occupied::before{
+    background:none;
+    backdrop-filter:saturate(1.55) brightness(1.06);
+    -webkit-backdrop-filter:saturate(1.55) brightness(1.06);
+  }
+  .team-load-add{
+    pointer-events:auto;position:relative;
+    width:20px;height:20px;
+    background:none;border:0;border-radius:50%;
+    font-size:16px;line-height:1;font-weight:500;font-family:inherit;
+    color:var(--ink-2);cursor:pointer;
+    display:none;align-items:center;justify-content:center;
+    padding:0;
+    transition:background-color 80ms;
+  }
+  /* "+" shows on empty cells AND cells with workload (so the user can stack
+     time off on top of an existing assignment). It's hidden only on cells
+     that already carry a leave — those open the time-off popover via a
+     direct click on the leave stripe. */
+  .team-load-add-overlay.is-addable .team-load-add{display:flex}
+  /* Hover state surfaces the button's padded hotzone: a tinted pill behind
+     the "+" sits above the overlay's cell tint, so the user gets a clear
+     "this is the actual click target" cue distinct from the cell highlight. */
+  .team-load-add:hover{color:var(--ink);background:rgba(0,0,0,0.07)}
+  .team-load-stripe:first-child{border-top-left-radius:0;border-top-right-radius:0}
+  .team-load-stripe:last-child{border-bottom-left-radius:0;border-bottom-right-radius:0}
+  .team-load-stripe.is-leave + .team-load-stripe{border-top-left-radius:4px;border-top-right-radius:4px}
+  /* Team workload row: keep only week boundaries; drop the per-day gridlines. */
+  .project-group.team-group .project-lane{
+    background-image:linear-gradient(to right, rgba(0,0,0,0.18) 1px, transparent 1px);
+    background-size: calc(var(--day-w) * 5) 100%;
+  }
+  .team-load-block{
+    width:100%;height:100%;
+    display:flex;flex-direction:column;
+    pointer-events:auto;
+  }
+  .team-load-stripe{
+    flex:1 1 0;min-height:0;background:var(--blk,#dcd9d2);
+  }
+  .team-load-stripe.is-leave:not(:only-child){flex:0 0 50%}
+  .team-load-stripe.is-empty-half{flex:0 0 50%;background:rgba(0,0,0,0.025)}
+  .team-load-stripe.is-leave{
+    /* Hatch lives inside the workload block (clipped by its rounded border)
+       so the diagonal pattern doesn't bleed into the surrounding cell. */
+    background:
+      repeating-linear-gradient(-45deg, #dcdcdc 0 4px, #f9f9f9 4px 8px);
+    box-shadow:inset 0 0 0 1px #dcdcdc;
+    display:flex;align-items:center;justify-content:center;
+    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    font-size:11px;font-weight:800;letter-spacing:.5px;
+    color:#dcdcdc;
+    cursor:pointer;
+  }
+  .team-load-stripe.is-leave .pto-tag{
+    background:#f9f9f9;padding:1px 4px;border-radius:5px;
+    color:#dcdcdc;text-transform:uppercase;font-size:9px;
+    display:inline-block;max-width:calc(100% - 16px);
+    overflow:hidden;white-space:nowrap;
+    box-sizing:border-box;min-width:0;
+  }
+  .team-load-stripe.is-empty-half + .team-load-stripe.is-leave{
+    border:2px solid #bdbab2;
+    border-radius:4px 4px 0 0;
+    box-shadow:none;
+    box-sizing:border-box;
+  }
+  /* Hide the 6px tint stripe on the team summary header — keep the row visually neutral. */
+  .project-side.team-side::before{display:none}
+  .project-side.team-side{padding-left:14px}
+  /* Team summary lane uses the same height as the project summary lane so
+     the sidebar and lane stay visually aligned. */
+  /* Child project rows under a team member — show the project key in mono, like the existing key-row. */
+  .member-row.team-project-row .member-side{padding-left:46px}
+  .member-row.team-project-row .member-name{font-weight:500}
+  .member-row.team-project-row .member-role{font-family:"IBM Plex Mono",ui-monospace,monospace;letter-spacing:.2px}
+  /* "Others" row — neutral gray; sits at the bottom of each member's stack
+     and surfaces work that isn't tracked on this board. */
+  .member-row.team-others-row .member-name{
+    color:var(--ink-3);font-weight:500;
+  }
+  /* Indicator dot for Others rows: dashed gray outline, no fill — to mirror
+     the dashed wi outline and stay distinct from project-colored solid dots. */
+  .member-row.team-others-row .member-side::before{
+    background:transparent;
+    width:8px;height:8px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='6.5' fill='none' stroke='%23bdbab2' stroke-width='1.5' stroke-dasharray='3 2'/></svg>");
+    background-size:100% 100%;
+  }
+  .member-row.team-others-row .wi .wi-label{color:var(--ink-2)}
+  /* Replace the default solid ::after border with an SVG outline that gives
+     us control over the dash pattern (longer dashes than border:dashed).
+     border-radius on the .wi itself makes the parent's overflow:clip honor
+     the rounded corners — without it the SVG stroke's curved arcs would be
+     truncated by the rectangular clip box and the corners look square. */
+  .wi.is-others{border-radius:4px}
+  .wi.is-others::after{display:none}
+  .wi.is-others .wi-outline{
+    position:absolute;inset:0;width:100%;height:100%;
+    pointer-events:none;z-index:1;
+  }
+  /* "Show N projects" collapsed hint, styled like the owner-chip. */
+  .team-side .team-collapse-hint{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:3px 8px 3px 4px;border-radius:20px;
+    font-size:12px;font-weight:500;color:var(--ink-2);
+  }
+  .team-side .owner-row:hover .team-collapse-hint{background:#f1efe9;color:var(--ink)}
+
+  /* Workload tag — same shape as status tag but more subtle. */
+  .workload-tag{
+    font-family:"Barlow Condensed",sans-serif;
+    font-size:11px;font-weight:700;letter-spacing:0;text-transform:uppercase;
+    width:54px;text-align:center;
+    padding:2px 0;border-radius:3px;flex:0 0 54px;
+    color:var(--ink-2);background:#ece9e1;
+  }
+  .workload-tag.light{color:#5a8a5e;background:#e1ecdf}
+  .workload-tag.normal{color:var(--ink-2);background:#ece9e1}
+  .workload-tag.heavy{color:#a36100;background:#fce5c2}
+
+  /* Active-Projects label (header-left) repurposed for team view. */
+  .team-board .active-projects{cursor:default}
+  .team-board .active-projects:hover{color:var(--ink-2)}
+  .team-board .active-projects svg{display:none}
+
+  /* Empty state for team view sits inside the rows container. */
+  .team-empty{padding:60px 20px;text-align:center}
+  .team-empty .es-title{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px}
+  .team-empty .es-desc{font-size:12px;color:var(--ink-2);max-width:360px;margin:0 auto;line-height:1.45}
+
+  /* ------------ Signed-in user ------------ */
+  .user-btn{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-left:2px}
+  .user-btn .avatar{width:26px;height:26px;font-size:10px;box-shadow:0 0 0 2px #fff,0 0 0 3px var(--line)}
+  .user-btn:hover .avatar{box-shadow:0 0 0 2px #fff,0 0 0 3px var(--line-strong)}
+  .dropdown .opt.is-info{cursor:default;color:var(--ink-2);font-size:11px;border-bottom:1px solid var(--line)}
+  .dropdown .opt.is-info:hover{background:transparent}
+
+  /* ------------ Footer sync status ------------ */
+  .footer-status{display:flex;align-items:center;gap:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ink-3);margin-right:6px;flex:0 0 7px}
+  .sync-dot.is-live{background:var(--status-on)}
+  .sync-dot.is-off{background:var(--status-risk)}
+
+  /* ------------ Loading / error screen ------------ */
+  .boot-msg{margin:auto;display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--ink-2);font-size:13px;padding-top:30vh}
+  .boot-msg .boot-detail{font-size:12px;color:var(--ink-3)}
+
+  /* ------------ Toasts ------------ */
+  .toast-stack{position:fixed;left:50%;bottom:44px;transform:translateX(-50%);z-index:2000;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none}
+  .toast{pointer-events:auto;cursor:pointer;max-width:520px;background:#1f1d18;color:#fff;border-radius:6px;padding:8px 12px;font-size:12px;line-height:1.4;box-shadow:0 4px 14px rgba(0,0,0,.15)}
+  .toast.is-warn{background:#7a4a00}
+  .toast.is-error{background:#8f1515}
+
+  /* ------------ Recent changes ------------ */
+  .activity-modal{width:620px}
+  .activity-modal .modal-body{max-height:calc(100vh - 200px);overflow:auto;padding:4px 12px}
+  .activity-row{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+  .activity-row:last-child{border-bottom:0}
+  .activity-row .avatar{width:20px;height:20px;font-size:9px;flex:0 0 20px;margin-top:1px}
+  .activity-main{flex:1;min-width:0;line-height:1.45}
+  .activity-details{color:var(--ink-2);font-size:11px;margin-top:2px;word-break:break-word}
+  .activity-time{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10px;color:var(--ink-3);white-space:nowrap;margin-top:2px}
+  .activity-empty{padding:24px 0;text-align:center;color:var(--ink-3)}
+
+  /* ------------ Admin ------------ */
+  .admin-modal{width:640px}
+  .admin-modal .modal-body{max-height:calc(100vh - 180px);overflow:auto}
+  .admin-hint{margin:0 0 10px;color:var(--ink-2);font-size:11px;line-height:1.45}
+  .people-list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:6px;margin-bottom:8px}
+  .person-row{display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--line)}
+  .person-row:last-child{border-bottom:0}
+  .person-row.is-inactive{opacity:.55}
+  .person-row .avatar{width:20px;height:20px;font-size:9px;flex:0 0 20px}
+  .person-name{flex:0 0 170px;border:1px solid transparent;border-radius:4px;padding:3px 5px;font:inherit;font-size:12px;color:var(--ink);background:transparent}
+  .person-name:hover{border-color:var(--line)}
+  .person-name:focus{border-color:#1f1d18;outline:none;background:#fff}
+  .person-email{flex:1;min-width:0;color:var(--ink-2);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .person-flag{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--ink-2);white-space:nowrap}
+  .add-person{display:flex;gap:6px}
+  .add-person input{flex:1;min-width:0;height:26px;border:1px solid var(--line-strong);border-radius:4px;padding:0 7px;font:inherit;font-size:12px}
+  .add-person input:focus{border-color:#1f1d18;outline:none}
+  .sprint-form{display:flex;align-items:flex-end;gap:8px}
+  .sprint-form .field{margin-bottom:0;flex:1}

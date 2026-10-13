@@ -1,0 +1,64 @@
+# Ships main to AWS: builds the Docker image, pushes it to ECR as :<commit>
+# and :prod, then rolls the ECS service onto it and waits until it's healthy.
+# If the new version fails its health checks, ECS rolls back automatically.
+#
+# One-time setup (see docs/DEPLOY.md): add these repository *variables*
+# (Settings → Secrets and variables → Actions → Variables) from the
+# CloudFormation stack outputs:
+#   AWS_REGION, AWS_DEPLOY_ROLE_ARN, ECR_REPOSITORY, ECS_CLUSTER, ECS_SERVICE
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # lets GitHub prove its identity to AWS; no AWS keys are stored in GitHub
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  deploy:
+    needs: test
+    if: vars.AWS_DEPLOY_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          IMAGE: ${{ steps.ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}
+        run: |
+          docker build -t "$IMAGE:$GITHUB_SHA" -t "$IMAGE:prod" .
+          docker push "$IMAGE:$GITHUB_SHA"
+          docker push "$IMAGE:prod"
+
+      - name: Roll out
+        run: |
+          aws ecs update-service --cluster "${{ vars.ECS_CLUSTER }}" --service "${{ vars.ECS_SERVICE }}" \
+            --force-new-deployment --query 'service.desiredCount' --output text
+          aws ecs wait services-stable --cluster "${{ vars.ECS_CLUSTER }}" --services "${{ vars.ECS_SERVICE }}"
+          echo "Deployed $GITHUB_SHA"
