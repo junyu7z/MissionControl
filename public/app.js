@@ -1,1382 +1,54 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<title>Mission Control — ArcSite Project Kanban</title>
-<meta name="viewport" content="width=1600" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet" />
-<style>
-  /* ------------ Tokens ------------ */
-  :root{
-    --bg: #fcfcf9;             /* Toned Background */
-    --panel: #ffffff;
-    --ink: #262626;            /* label primary */
-    --ink-2: #737373;          /* label secondary */
-    --ink-3: #a3a3a3;
-    --line: #e6e3dd;           /* subtle separator */
-    --line-strong: #cccccc;
-    --line-week: #b8b3a8;
-    --row-h: 36px;
-    --proj-head-h: 100px;
-    --sidebar-w: 320px;
-    --day-w: 72px;
-    --link: #398ae7;
-    --status-on: #34a853;
-    --status-on-bg: #d8efdc;
-    --status-risk: #faa21b;
-    --status-risk-bg: #fdebcd;
-    --status-off: #dd2222;
-    --status-off-bg: #fad7d7;
-    --today-ink: #1f1d18;
-    --shadow: 0 1px 2px rgba(0,0,0,.04), 0 1px 1px rgba(0,0,0,.03);
-    font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  }
-
-  *{box-sizing:border-box}
-  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-size:12px;line-height:1.35;-webkit-font-smoothing:antialiased}
-  button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
-  a{color:var(--link);text-decoration:none}
-  a:hover{text-decoration:underline}
-
-  /* ------------ App layout ------------ */
-  .app{display:flex;flex-direction:column;height:100vh;min-width:1440px}
-
-  /* ------------ Scrollbar ------------ */
-  #boardScroll::-webkit-scrollbar{height:6px;width:6px}
-  #boardScroll::-webkit-scrollbar-track{background:transparent}
-  #boardScroll::-webkit-scrollbar-thumb{background:transparent;border-radius:3px;transition:background .2s}
-  #boardScroll.is-panning::-webkit-scrollbar-thumb{background:rgba(0,0,0,.25)}
-  #boardScroll{scrollbar-width:thin;scrollbar-color:transparent transparent}
-  #boardScroll.is-panning{scrollbar-color:rgba(0,0,0,.25) transparent}
-
-  /* ------------ TopToolbar ------------ */
-  .toolbar{
-    display:flex;align-items:center;gap:16px;height:58px;
-    padding:0 18px;background:var(--panel);
-    border-bottom:1px solid var(--line);position:relative;z-index:5;
-  }
-  .brand{display:flex;align-items:center;gap:11px;min-width:260px}
-  .brand-icon{
-    width:32px;height:32px;border-radius:7px;background:#1f1d18;color:#fff;
-    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;
-  }
-  .brand-title{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-.14px;line-height:1.15}
-  .brand-sub{font-size:10px;color:var(--ink-2);letter-spacing:.66px;text-transform:uppercase;line-height:1.3}
-
-  .seg{
-    position:absolute;left:50%;transform:translateX(-50%);
-    display:inline-flex;background:#f1efe9;border-radius:8px;padding:3px;gap:2px;
-  }
-  .seg button{
-    height:27px;padding:0 14px;border-radius:6px;font-size:12px;color:var(--ink-2);
-    display:inline-flex;align-items:center;gap:6px;font-weight:500;
-  }
-  .seg .active{background:#fff;color:var(--ink);box-shadow:var(--shadow)}
-  .seg svg{width:13px;height:13px}
-  .add-mode-seg{position:static;left:auto;transform:none;margin-bottom:14px;display:flex;width:100%}
-  .add-mode-seg button{flex:1;justify-content:center;padding:0}
-
-  .spacer{flex:1}
-
-  .right-cluster{display:flex;align-items:center;gap:8px}
-  .sprint-range{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;color:var(--ink);margin-right:4px}
-  .ico-btn,.btn{
-    height:28px;border:1px solid var(--line);border-radius:6px;
-    background:#fff;color:var(--ink);display:inline-flex;align-items:center;
-    gap:6px;padding:0 10px;font-size:12px;font-weight:500;
-  }
-  .ico-btn{padding:0;width:28px;justify-content:center}
-  #expandAllBtn{min-width:108px;justify-content:center}
-  .ico-btn:hover,.btn:hover{background:#faf8f3}
-  .ico-btn svg,.btn svg{width:13px;height:13px;stroke:var(--ink);stroke-width:1.6;fill:none}
-  .zoom-group{display:inline-flex}
-  .zoom-group .ico-btn:first-child{border-top-right-radius:0;border-bottom-right-radius:0;border-right:0}
-  .zoom-group .ico-btn:last-child{border-top-left-radius:0;border-bottom-left-radius:0}
-
-  /* ------------ Board scroller ------------ */
-  .board-scroll{flex:1;overflow-x:scroll;overflow-y:auto;background:var(--bg);position:relative;scrollbar-gutter:stable}
-  .board{padding-bottom:48px;min-height:100%;box-sizing:border-box}
-  .board-scroll.is-dragging{cursor:grabbing !important;user-select:none;-webkit-user-select:none}
-  .board-scroll.is-dragging .wi,
-  .board-scroll.is-dragging .ms-flag{cursor:grabbing !important}
-  .board{position:relative;width:max-content;min-width:100%}
-
-  /* ------------ TimelineHeader ------------ */
-  .header{
-    position:sticky;top:0;z-index:20;background:#fff;
-    border-bottom:1px solid var(--line-strong);
-    display:grid;grid-template-columns:var(--sidebar-w) 1fr;
-  }
-  .header-left{
-    display:flex;align-items:flex-end;justify-content:space-between;
-    padding:0 14px 8px;border-right:1px solid var(--line-strong);
-    position:sticky;left:0;z-index:9;background:#fff;
-  }
-  .active-projects{font-size:11px;font-weight:600;color:var(--ink-2);letter-spacing:.4px;text-transform:uppercase;display:inline-flex;align-items:center;gap:4px;cursor:pointer;user-select:none}
-  .active-projects:hover{color:var(--ink)}
-  .add-row{width:18px;height:18px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;color:var(--ink-2)}
-  .add-row:hover{background:#f1efe9;color:var(--ink)}
-
-  .header-right{display:flex;flex-direction:column}
-  .month-row{display:flex;height:18px;border-bottom:1px solid var(--line)}
-  .month-cell{
-    font-size:10px;font-weight:600;color:var(--ink-2);
-    letter-spacing:.66px;padding:3px 8px;display:flex;gap:6px;align-items:center;
-    text-transform:uppercase;border-right:1px solid var(--line);
-  }
-  .month-cell em{font-style:normal;color:var(--ink-3);font-weight:500}
-
-  .day-row{display:flex;height:40px}
-  .day{
-    width:var(--day-w);flex:0 0 var(--day-w);
-    border-right:1px solid var(--line);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    font-size:10px;color:var(--ink-2);letter-spacing:.4px;
-    text-transform:uppercase;font-weight:500;gap:1px;
-  }
-  .day .num{font-size:14px;color:var(--ink);font-weight:600;letter-spacing:-.1px}
-  .day.weekstart{border-left:1px solid var(--line-week)}
-  .day.today{background:var(--today-ink);color:#cfcdc6}
-  .day.today .num{color:#fff}
-
-  /* Week-mode: collapse Mon..Fri into one cell that spans the whole week */
-  .board.is-week-mode .day:not(.weekstart){ display:none }
-  .board.is-week-mode .day.weekstart{
-    width:calc(var(--day-w) * 5);
-    flex:0 0 calc(var(--day-w) * 5);
-    border-left:none;
-    border-right:1px solid var(--line);
-    align-items:flex-start;
-    padding-left:6px;
-  }
-  .day .mon{display:none}
-  .board.is-week-mode .day .dow{display:none}
-  .board.is-week-mode .day .mon{display:block}
-  .board.is-week-mode .project-lane,
-  .board.is-week-mode .member-lane{
-    background-image:linear-gradient(to right, rgba(0,0,0,0.18) 1px, transparent 1px);
-    background-size:calc(var(--day-w) * 5) 100%;
-  }
-
-  .sprint-row{display:flex;height:18px;border-top:1px solid var(--line)}
-  .sprint-cell{
-    flex:0 0 calc(var(--day-w) * 5);
-    border-left:1px solid var(--line-week);
-    font-size:10px;color:var(--ink-2);letter-spacing:.66px;text-transform:uppercase;
-    display:flex;align-items:center;justify-content:center;gap:6px;font-weight:500;
-  }
-  .sprint-cell:first-child{border-left:none}
-  .sprint-cell em{font-style:normal;color:var(--ink-3)}
-  .sprint-cell .sc-abbr{display:none;align-items:center;gap:4px}
-  .board.is-tight .sprint-cell .sc-full{display:none}
-  .board.is-tight .sprint-cell .sc-abbr{display:inline-flex}
-
-  /* ------------ Project rows ------------ */
-  .project{display:grid;grid-template-columns:var(--sidebar-w) 1fr}
-  .project-side{
-    border-right:1px solid var(--line-strong);
-    background:#fff;
-    padding:12px 14px 10px;display:flex;flex-direction:column;gap:6px;
-    position:sticky;left:0;z-index:7;
-    isolation:isolate;
-  }
-  body.is-proj-dragging,
-  body.is-member-dragging{ cursor:grabbing !important; user-select:none; -webkit-user-select:none }
-  body.is-proj-dragging .wi,
-  body.is-proj-dragging .ms-flag,
-  body.is-member-dragging .wi,
-  body.is-member-dragging .ms-flag{ cursor:grabbing !important }
-  .project-group.is-proj-source{ opacity:.45 }
-  .member-row.is-member-source{ opacity:.45 }
-  .proj-drop-indicator{
-    position:fixed;height:2px;background:var(--ink);
-    z-index:9999;pointer-events:none;border-radius:1px;
-    box-shadow:0 0 0 1px rgba(255,255,255,.6);
-  }
-  .project-side::before{
-    content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--tint, #ccc);
-    z-index:1;
-  }
-  .project-side::after{
-    content:"";position:absolute;inset:0;background:var(--tint-bg, transparent);
-    z-index:-1;pointer-events:none;transition:filter .15s;
-  }
-  .project-head{display:flex;align-items:center;gap:6px}
-  .chev{width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;color:var(--ink-2);flex:0 0 14px}
-  .project-title{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-.14px;flex:1;min-width:0;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .status{
-    font-family:"Barlow Condensed",sans-serif;
-    font-size:12px;font-weight:700;letter-spacing:0;text-transform:uppercase;
-    width:64px;text-align:center;
-    padding:2px 0;border-radius:3px;flex:0 0 64px;
-  }
-  .status.ontrack{background:#3a9e3f;color:#fff}
-  .status.atrisk{background:#f0a500;color:#fff}
-  .status.offtrack{background:#d42020;color:#fff}
-  .status.archived{background:#8a8579;color:#fff}
-
-  .key-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ink-2);font-family:"IBM Plex Mono",ui-monospace,monospace;min-height:15px}
-  .key-row:empty::before{content:"";display:inline-block}
-
-  /* owner chip row (collapsed state) */
-  .owner-row{margin-top:6px;cursor:pointer}
-  .owner-chip{
-    display:inline-flex;align-items:center;gap:6px;
-    padding:3px 8px 3px 3px;border-radius:20px;
-    background:transparent;transition:background .15s;
-    max-width:100%;overflow:hidden;
-  }
-  body:not(.is-proj-dragging) .owner-row:hover .owner-chip{background:var(--tint-bg)}
-  .owner-chip .avatar{flex:0 0 20px}
-  .owner-chip .owner-name{font-size:12px;font-weight:500;color:var(--ink);white-space:nowrap}
-  .owner-hint{
-    display:none;font-size:11px;color:var(--ink-2);
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  /* Hover: when the project has other members, replace the long hint with
-     the secondary "+ N project members" count. When there are no other
-     members, fall back to the existing hint. */
-  body:not(.is-proj-dragging) .owner-row:hover .owner-chip:not(:has(.owner-extra)) .owner-hint{display:inline}
-  .owner-extra{
-    display:none;font-size:11px;color:var(--ink-2);font-weight:400;
-    white-space:nowrap;
-  }
-  body:not(.is-proj-dragging) .owner-row:hover .owner-extra{display:inline}
-
-  /* expand controls (expanded state) */
-  .expand-controls{display:flex;align-items:center;justify-content:space-between;font-size:11px;margin-top:6px;min-height:26px}
-  .show-toggle{color:var(--link);font-weight:500}
-  /* Add-Member link in expand-controls — collapsed to "+" by default,
-     expands rightward on hover so the + visually moves left and the label
-     trails it. Matches the Add Project button in the header. */
-  /* Temporarily hidden — restore when "Add member" affordance returns. */
-  .add-member{display:none}
-  .add-member--reserved{
-    color:var(--ink-2);font-weight:500;
-    display:inline-flex;align-items:center;gap:0;height:22px;padding:0 4px;
-    border-radius:4px;overflow:hidden;text-decoration:none;cursor:pointer;
-  }
-  .add-member .label{
-    display:inline-block;white-space:nowrap;overflow:hidden;
-    max-width:0;opacity:0;margin-left:0;
-    transition:max-width 200ms ease, opacity 150ms ease, margin-left 200ms ease;
-  }
-  .add-member:hover{color:var(--ink);background:#fff}
-  .add-member:hover .label{ max-width:120px;opacity:1;margin-left:4px }
-
-  /* ------------ Project timeline lane ------------ */
-  .project-lane{
-    position:relative;
-    background-image:
-      linear-gradient(to right, rgba(0,0,0,0.18) 1px, transparent 1px),
-      linear-gradient(to right, rgba(0,0,0,0.08) 1px, transparent 1px);
-    background-size: calc(var(--day-w) * 5) 100%, var(--day-w) 100%;
-    background-position: 0 0, 0 0;
-    isolation:isolate;
-  }
-  .project-lane{background-color:#f3f3ee}
-  .project-lane::before{
-    content:"";position:absolute;
-    left:var(--tint-left, 0); width:var(--tint-width, 100%);
-    top:0; bottom:0;
-    background:var(--tint-bg, transparent);
-    z-index:-1;pointer-events:none;transition:filter .15s;
-  }
-  .project-summary{
-    position:relative;height:var(--proj-head-h);
-  }
-  .week-divider{display:none}
-  .week-overlay{display:none}
-
-  /* ------------ Member rows ------------ */
-  .member-side{
-    border-right:1px solid var(--line-strong);
-    background:#fff;
-    height:var(--row-h);padding:0 14px 0 18px;display:flex;align-items:center;gap:8px;
-    position:sticky;left:0;z-index:7;
-    isolation:isolate;
-  }
-  .member-side::before{
-    content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--tint, #ccc);
-    z-index:1;
-  }
-  .member-side::after{
-    content:"";position:absolute;inset:0;background:var(--tint-bg, transparent);
-    z-index:-1;pointer-events:none;transition:filter .15s;
-  }
-  .avatar{
-    width:20px;height:20px;border-radius:50%;flex:0 0 20px;display:flex;align-items:center;justify-content:center;
-    font-size:9px;font-weight:600;color:#fff;letter-spacing:.2px;
-  }
-  .member-meta{display:flex;flex-direction:column;line-height:1.1;min-width:0}
-  .member-name{font-size:12px;font-weight:500;color:var(--ink);letter-spacing:-.05px}
-  .member-role{font-size:10px;color:var(--ink-2);text-transform:none}
-  .member-row{display:grid;grid-template-columns:var(--sidebar-w) 1fr;height:var(--row-h);position:relative;z-index:7}
-  .member-block{background-color:#f9f8f5}
-  .member-lane{
-    position:relative;
-    background-image:
-      linear-gradient(to right, rgba(0,0,0,0.18) 1px, transparent 1px),
-      linear-gradient(to right, rgba(0,0,0,0.08) 1px, transparent 1px);
-    background-size: calc(var(--day-w) * 5) 100%, var(--day-w) 100%;
-    border-bottom:1px dashed rgba(0,0,0,.05);
-    isolation:isolate;
-  }
-  .member-lane::before{
-    content:"";position:absolute;
-    left:var(--tint-left, 0); width:var(--tint-width, 100%);
-    top:0; bottom:0;
-    background:var(--tint-bg, transparent);
-    z-index:-1;pointer-events:none;transition:filter .15s;
-  }
-
-  /* ------------ Project group wrapper ------------ */
-  .project-group{position:relative;margin-bottom:4px}
-
-  /* ------------ Milestone marker ------------ */
-  .milestone{
-    position:absolute;top:8px;bottom:0;width:2px;background:var(--ms);
-    z-index:4;pointer-events:none;overflow:visible;
-    isolation:isolate;
-  }
-  .milestone::before{
-    content:"";position:absolute;
-    left:var(--card-l, -10px);
-    top:var(--card-t, -8px);
-    width:var(--card-w, 180px);
-    height:var(--card-h, 100px);
-    background:#fff;
-    border:none;
-    border-radius:0 6px 6px 0;
-    box-shadow: inset 0 0 0 2px var(--ms), 0 6px 18px rgba(0,0,0,.06);
-    opacity:0;transition:opacity .12s;
-    pointer-events:none;
-    z-index:0;
-  }
-  .milestone.is-hovered::before{ opacity:1 }
-  .milestone.is-hovered{ z-index:50 }
-  /* Drag cursor over the entire hovered milestone card. Cursor inheritance does the work
-     — pointer-events stay off so cell-hover tracking doesn't flicker. */
-  .milestone.is-hovered{cursor:grab}
-  /* Hit zone covering the whole hover card. By default pointer-events are off so
-     lane.mousemove keeps tracking hover; when a popover is open (scrim covers the
-     lane) we promote the hit zone to receive events. Sized only when hovered, so it
-     doesn't grab paint area unnecessarily in the default state. */
-  .ms-hit{
-    position:absolute;
-    left:0;top:0;width:0;height:0;
-    pointer-events:none;
-  }
-  .milestone.is-hovered .ms-hit{
-    left:var(--card-l, -10px);
-    top:var(--card-t, -8px);
-    width:var(--card-w, 180px);
-    height:var(--card-h, 100px);
-  }
-  .ms-flag{
-    position:absolute;left:0;top:0;
-    background:var(--ms);color:#fff;
-    font-family:"Barlow Condensed",sans-serif;font-size:11px;font-weight:700;
-    letter-spacing:.5px;text-transform:uppercase;
-    padding:5px 20px 5px 8px;line-height:1;white-space:nowrap;
-    clip-path:polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%);
-    max-width:240px;
-    overflow:hidden;text-overflow:ellipsis;
-    pointer-events:auto;
-  }
-  .milestone.is-hovered .ms-flag{ max-width:360px; overflow:hidden; text-overflow:ellipsis }
-  .ms-title{
-    position:absolute;left:8px;top:33px;
-    font-size:12px;font-weight:600;color:var(--ink);
-    white-space:nowrap;line-height:1.3;
-    max-width:228px;
-    overflow:hidden;text-overflow:ellipsis;
-  }
-  .ms-desc{
-    position:absolute;left:8px;top:51px;
-    font-size:10px;color:var(--ink-2);white-space:nowrap;
-    max-width:228px;
-    overflow:hidden;text-overflow:ellipsis;
-  }
-  .milestone.is-hovered .ms-title,
-  .milestone.is-hovered .ms-desc{ max-width:348px; overflow:hidden; text-overflow:ellipsis }
-
-  /* ------------ Work item bar ------------ */
-  .wi{
-    position:absolute;top:8px;height:20px;
-    display:flex;align-items:center;padding:0 6px;
-    font-size:11px;color:var(--ink);font-weight:500;
-    white-space:nowrap;
-    z-index:2;cursor:grab;
-  }
-  .wi::before{
-    content:"";position:absolute;inset:0;pointer-events:none;
-    /* Translucent tint only — when the bar overlaps an OFF cell, the hatch
-       texture behind shows through the tint. */
-    background:var(--wi-bg);
-    border-radius:4px;
-  }
-  .wi::after{
-    content:"";position:absolute;inset:0;pointer-events:none;
-    border:1px solid var(--wi-bd);border-radius:4px;
-  }
-  .wi{overflow:clip}
-  .wi:hover::after,
-  .wi.is-dragging::after{border-color:rgba(0,0,0,.45)}
-
-  /* OFF-day hatch is drawn by per-lane SVGs (.lane-hatch). Each SVG owns its
-     own <pattern> definition, and alignHatchOverlays() sets patternTransform
-     to translate(-globalX, -globalY) so every lane's pattern is anchored at
-     the same global origin (the .rows top-left). All hatched rects across
-     all lanes therefore tile from one shared imaginary pattern grid — no
-     rasterization drift, no sub-pixel offset. */
-  .lane-leave{
-    position:absolute;top:0;bottom:0;pointer-events:none;
-    background:transparent;
-    z-index:0;
-  }
-  .lane-hatch{
-    position:absolute;left:0;top:0;width:100%;height:100%;
-    pointer-events:none;
-    z-index:0;
-    overflow:visible;
-    color:#e6e6e6;
-    transition:color .15s;
-  }
-  /* Per-bar hatch overlay, clipped by the work-item's overflow:clip so the
-     tinted stripes only appear inside the bar. Sits above the bar's tint
-     fill but below the label text. Color matches the hover-state stripe so
-     the overlap reads as the project hue without flooding the bar. */
-  .wi-hatch{
-    position:absolute;left:0;top:0;width:100%;height:100%;
-    pointer-events:none;
-    overflow:visible;
-    color:color-mix(in srgb, var(--tint, #e6e6e6) 50%, #ffffff);
-    transition:color .15s;
-  }
-  /* While the bar is being moved or resized the wi-hatch is regenerated in
-     the drag handler so the OFF-day stripes stay aligned with the cells the
-     bar is currently overlapping. */
-  /* Per-row segment of a project's milestone vertical line. The outer
-     .milestone (z=4) is hidden behind member-row's stacking context;
-     each row draws its own line inside .member-lane so the marker reads
-     above the OFF-day hatch (z=0) but below the wi label (which sits
-     inside .wi z=2 and visually overlays the line as it crosses a bar). */
-  .member-lane > .ms-line{
-    position:absolute;top:0;bottom:0;width:2px;
-    z-index:1;pointer-events:none;
-  }
-  /* During a milestone drag the outer .milestone moves with the cursor (and is
-     promoted via .is-dragging z-index:30 to read above row content), but the
-     per-row segments stay at the original idx until the drop commits and the
-     row re-renders. Hide them while any milestone is being dragged so the
-     stale lines don't double-up beside the moving marker. */
-  body:has(.milestone.is-dragging) .member-lane > .ms-line{display:none}
-  .lane-hatch.lane-hatch--dark{color:#dcdcdc}
-  /* In project view, OFF-cell hatch stripes pick up a faint version of the
-     project tint so the dark diagonals read as the brand hue against the
-     tinted lane background — stronger than the cell tint behind, but
-     softer than the wi-hatch overlay inside a bar. Team view keeps the
-     neutral gray since its lanes aren't tinted. */
-  .board:not(.team-board) .lane-hatch{
-    color:color-mix(in srgb, var(--tint, #e6e6e6) 22%, #ffffff);
-  }
-  /* The tinted layer is clipped to the project's duration so OFF cells
-     outside [--tint-left, --tint-width] don't pick up the project hue.
-     A sibling .lane-hatch--gray-base SVG paints the same OFF stripes in
-     neutral gray underneath — visible only where the tinted layer is
-     clipped away. */
-  .board:not(.team-board) .lane-hatch:not(.lane-hatch--gray-base){
-    clip-path: inset(0 calc(100% - var(--tint-left, 0px) - var(--tint-width, 100%)) 0 var(--tint-left, 0px));
-  }
-  .lane-hatch.lane-hatch--gray-base{color:#e6e6e6 !important}
-  /* On row/project hover, the hatch stripes adopt a softened version of the
-     project tint — only slightly darker than the resting #ececec, just
-     enough to read as the brand hue without flooding the cell. While dragging
-     a work item, hover follows the source row only (not the cursor). */
-  body:not(.is-proj-dragging):not(.is-item-dragging) .member-row:hover .lane-hatch,
-  .member-row.is-drag-source-row .lane-hatch{
-    color:color-mix(in srgb, var(--tint, #ececec) 35%, #ffffff);
-  }
-  /* Mirror the row-hover treatment for the per-bar hatch (wi-hatch) so the
-     OFF-day stripes inside any work item in the highlighted row brighten in
-     sync with the lane-hatch. */
-  body:not(.is-proj-dragging):not(.is-item-dragging) .member-row:hover .wi-hatch,
-  .member-row.is-drag-source-row .wi-hatch{
-    color:color-mix(in srgb, var(--tint, #ececec) 75%, #ffffff);
-  }
-  .wi .wi-label{flex:0 1 auto;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-    position:sticky;left:calc(var(--sidebar-w) + 6px)}
-  .wi .wi-handle{
-    position:absolute;top:0;bottom:0;width:5px;
-    cursor:ew-resize;opacity:0;background:rgba(0,0,0,.18);
-  }
-  .wi .wi-handle.l{left:0;border-radius:4px 0 0 4px}
-  .wi .wi-handle.r{right:0;border-radius:0 4px 0 4px}
-  .wi:hover .wi-handle{opacity:1}
-  .wi.is-dragging .wi-handle{opacity:1}
-
-  /* milestone hover */
-  .milestone{transition:filter .12s}
-  .milestone.is-hovered{filter:brightness(1.06)}
-  .milestone .ms-flag{cursor:grab}
-  .ms-tooltip{
-    position:absolute;left:var(--card-l, 0);
-    top:calc(var(--card-t, -8px) - 4px);
-    transform:translateY(-100%);
-    background:#1f1d18;color:#fff;
-    border-radius:4px;padding:4px 8px;font-size:10px;
-    letter-spacing:.3px;white-space:nowrap;
-    opacity:0;pointer-events:none;transition:opacity .12s;
-    box-shadow:0 2px 6px rgba(0,0,0,.18);
-  }
-  .milestone.is-hovered .ms-tooltip{opacity:1;transition:opacity .12s .4s}
-  .ms-tooltip strong{display:block;font-weight:600}
-
-  /* row hover — bump tint saturation only on the background pseudos,
-     so text and inner content stay unaffected. Disabled while dragging a
-     project AND while dragging/resizing a work item (in the latter case the
-     source row stays highlighted via .is-drag-source-row, see below). */
-  body:not(.is-proj-dragging):not(.is-item-dragging) .project:hover .project-side::after,
-  body:not(.is-proj-dragging):not(.is-item-dragging) .project:hover .project-lane::before,
-  body:not(.is-proj-dragging):not(.is-item-dragging) .member-row:hover .member-side::after,
-  body:not(.is-proj-dragging):not(.is-item-dragging) .member-row:hover .member-lane::before,
-  /* Force the source row's highlight regardless of cursor position. Set
-     during item drag and held until the cursor leaves the row, so the
-     post-release re-render doesn't flicker the hover state off. */
-  .member-row.is-drag-source-row .member-side::after,
-  .member-row.is-drag-source-row .member-lane::before{
-    filter: saturate(2.6);
-  }
-  /* hovering the project card (left sidebar) highlights only the project
-     summary row — member rows stay at their idle tint so the project header
-     reads as the focused element. */
-  body:not(.is-proj-dragging):not(.is-item-dragging) .project-group:has(.project-side:hover) .project-side::after,
-  body:not(.is-proj-dragging):not(.is-item-dragging) .project-group:has(.project-side:hover) .project-lane::before{
-    filter: saturate(2.6);
-  }
-  /* Project view: deepen the hover tint further so the highlighted row reads
-     distinctly against the resting tint. The base rule above only intensifies
-     chroma via filter:saturate, but the resting bgMember is alpha 0.07 — too
-     translucent for saturate alone to register. Override the background with
-     a heavier-alpha mix of --tint so the hover state actually reads. Scoped
-     to .board:not(.team-board) so team view keeps its existing behavior. */
-  body:not(.is-proj-dragging):not(.is-item-dragging) .board:not(.team-board) .project:hover .project-side::after,
-  body:not(.is-proj-dragging):not(.is-item-dragging) .board:not(.team-board) .project:hover .project-lane::before,
-  body:not(.is-proj-dragging):not(.is-item-dragging) .board:not(.team-board) .member-row:hover .member-side::after,
-  body:not(.is-proj-dragging):not(.is-item-dragging) .board:not(.team-board) .member-row:hover .member-lane::before,
-  body:not(.is-proj-dragging):not(.is-item-dragging) .board:not(.team-board) .project-group:has(.project-side:hover) .project-side::after,
-  body:not(.is-proj-dragging):not(.is-item-dragging) .board:not(.team-board) .project-group:has(.project-side:hover) .project-lane::before,
-  /* Source-row override (project view) — held across the post-release
-     re-render to avoid hover flicker. */
-  .board:not(.team-board) .member-row.is-drag-source-row .member-side::after,
-  .board:not(.team-board) .member-row.is-drag-source-row .member-lane::before{
-    background:color-mix(in srgb, var(--tint, #ccc) 22%, transparent);
-    filter:none;
-  }
-
-  /* timeline cell hover overlay + add affordance */
-  .cell-hover{
-    position:absolute;top:0;bottom:0;
-    background:rgba(0,0,0,.045);
-    pointer-events:none;
-    display:none;z-index:0;
-  }
-  .cell-hover.is-active{display:block}
-  .cell-hover .add-btn{
-    pointer-events:auto;position:absolute;
-    left:50%;top:50%;transform:translate(-50%,-50%);
-    width:auto;height:auto;padding:8px 10px;background:none;border:0;box-shadow:none;
-    font-size:16px;line-height:1;color:var(--ink-2);font-weight:500;
-    cursor:pointer;
-  }
-  .cell-hover .add-btn:hover{color:var(--ink)}
-  .cell-hover.is-occupied .add-btn{display:none}
-
-  /* Body-level tooltip so it can escape sticky sidebar / overflow clipping */
-  .floating-tip{
-    position:fixed;background:#1f1d18;color:#fff;
-    padding:4px 8px;border-radius:4px;
-    font-size:11px;letter-spacing:.3px;white-space:nowrap;
-    opacity:0;pointer-events:none;transition:opacity 50ms;
-    box-shadow:0 2px 6px rgba(0,0,0,.18);
-    z-index:10000;transform:translate(-50%,-100%);
-  }
-  /* Appear-delay (400ms) is JS-driven so a warm hand-off can skip it. */
-  .floating-tip.show{opacity:1;transition:opacity 120ms}
-  .floating-tip.multiline{transform:none;line-height:1.4;white-space:normal;max-width:260px}
-  .floating-tip.multiline strong{display:block;font-weight:600}
-  .floating-tip.multiline .tip-hint{display:block;margin-top:3px;color:inherit;font-size:10.5px;letter-spacing:.2px}
-  /* Anchored mode: JS computes exact top/left from a target rect (above-by-
-     default, flipped below if no room, horizontally clamped to viewport).
-     Disable both default transforms so the position is taken at face value. */
-  .floating-tip.tip-anchored{transform:none}
-
-  /* ------------ Today marker ------------ */
-  .today-marker{
-    position:absolute;top:0;bottom:0;width:1px;border:none;
-    z-index:6;pointer-events:none;
-  }
-  .today-marker .tm-line{
-    position:absolute;top:0;bottom:0;left:0;width:1px;
-    background: repeating-linear-gradient(
-      to bottom,
-      rgba(31,29,24,0.55) 0px, rgba(31,29,24,0.55) 8px,
-      transparent 8px, transparent 10px
-    );
-    transform:scaleX(0.5);
-    transform-origin:left center;
-  }
-  .today-marker::before{
-    content:"";position:absolute;left:50%;transform:translateX(-50%);width:0;height:0;
-    border-left:6px solid transparent;border-right:6px solid transparent;
-    top:0;border-top:6px solid #1f1d18;
-  }
-  /* Bottom marker (down arrow + NOW label) is rendered as a separate fixed
-     element pinned to the bottom of the visible scroll viewport, so it stays
-     just above the footer regardless of how tall the project list grows. */
-  .now-floor{
-    position:fixed;z-index:7;pointer-events:none;
-    width:0;height:0;
-  }
-  .now-floor .tm-arrow{
-    position:absolute;left:0;bottom:0;width:0;height:0;
-    border-left:6px solid transparent;border-right:6px solid transparent;
-    border-bottom:6px solid #1f1d18;transform:translateX(-50%);
-  }
-  .now-date{
-    position:absolute;left:6px;bottom:22px;font-family:"IBM Plex Mono",ui-monospace,monospace;
-    font-size:11px;color:var(--ink-2);white-space:nowrap;pointer-events:none;display:none;
-  }
-  .now-floor.is-week-mode .now-date{display:block}
-  .now-label{
-    position:absolute;left:6px;bottom:6px;font-family:"IBM Plex Mono",ui-monospace,monospace;
-    font-size:11px;color:var(--ink-2);white-space:nowrap;pointer-events:none;
-  }
-
-  /* ------------ Footer ------------ */
-  .footer{
-    height:28px;border-top:1px solid var(--line);background:var(--panel);
-    display:flex;align-items:center;justify-content:space-between;
-    padding:0 18px;font-size:11px;color:var(--ink-2);
-    font-family:"IBM Plex Mono",ui-monospace,monospace;
-  }
-  .footer .center{color:var(--ink-2)}
-  .kbd{
-    display:inline-block;border:1px solid var(--line-strong);
-    border-radius:4px;padding:1px 6px;font-size:10px;color:var(--ink);
-    background:#fff;margin:0 2px;
-  }
-
-  /* owner tooltip — matches the milestone tooltip style */
-  .owner-row{position:relative}
-  .tooltip{display:none}  /* legacy inline tooltip, replaced by body-level .floating-tip */
-
-  /* ------------ Modal / scrim ------------ */
-  .scrim{position:fixed;inset:0;background:rgba(31,29,24,.18);z-index:200;display:flex;align-items:center;justify-content:center}
-  .modal{
-    background:#fff;border:1px solid var(--line-strong);border-radius:6px;
-    width:420px;max-width:calc(100vw - 32px);box-shadow:0 4px 16px rgba(0,0,0,.08);
-    font-size:12px;
-  }
-  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line)}
-  .modal-title{font-size:13px;font-weight:600;color:var(--ink)}
-  .modal-close{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--ink-2)}
-  .modal-close:hover{background:#f1efe9;color:var(--ink)}
-  .modal-body{padding:12px}
-  .modal-foot{display:flex;justify-content:flex-end;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:#fafaf6;border-radius:0 0 6px 6px}
-  .modal-foot.confirm-foot{justify-content:space-between !important;align-items:center;gap:10px}
-  .modal-foot.confirm-foot .msg{font-size:12px;color:var(--ink-2);flex:1;text-align:left}
-  .modal-foot.confirm-foot .confirm-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}
-
-  .tabs{display:flex;gap:0;border-bottom:1px solid var(--line);margin-bottom:12px}
-  .tabs button{padding:6px 10px;font-size:11px;font-weight:500;color:var(--ink-2);border-bottom:2px solid transparent;margin-bottom:-1px}
-  .tabs button.active{color:var(--ink);border-bottom-color:var(--ink)}
-
-  .field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;position:relative}
-  .field label{font-size:10px;font-weight:600;color:var(--ink-2);letter-spacing:.4px;text-transform:uppercase}
-  .field input,.field select,.field textarea{
-    border:1px solid var(--line-strong);border-radius:4px;background:#fff;
-    padding:5px 7px;font:inherit;color:var(--ink);font-size:12px;outline:none;
-    width:100%;box-sizing:border-box;min-width:0;
-  }
-  .field input:focus,.field select:focus,.field textarea:focus{border-color:#1f1d18}
-  .field textarea{resize:vertical;min-height:48px;font-family:inherit}
-  .field .hint{font-size:10px;color:var(--ink-3)}
-  .field .req{color:var(--status-off);margin-left:2px}
-  .field-row{display:flex;gap:8px}
-  .field-row > .field{flex:1}
-  .field .err{font-size:10px;color:var(--status-off)}
-
-  .btn-primary{
-    height:26px;padding:0 12px;border-radius:4px;background:#1f1d18;color:#fff;
-    font-weight:500;font-size:12px;border:1px solid #1f1d18;display:inline-flex;align-items:center;gap:6px;
-  }
-  .btn-primary:hover{background:#000}
-  .btn-primary:disabled{background:#a3a3a3;border-color:#a3a3a3;cursor:not-allowed}
-  .btn-secondary{
-    height:26px;padding:0 10px;border-radius:4px;background:#fff;color:var(--ink);
-    border:1px solid var(--line-strong);font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:6px;
-  }
-  .btn-secondary:hover{background:#faf8f3}
-  .btn-danger{
-    height:26px;padding:0 10px;border-radius:4px;background:#fff;color:var(--status-off);
-    border:1px solid var(--status-off);font-size:12px;font-weight:500;
-  }
-  .btn-danger:hover{background:var(--status-off-bg)}
-
-  /* Member chip multi-select */
-  .chips{display:flex;flex-wrap:wrap;gap:4px;padding:4px;border:1px solid var(--line-strong);border-radius:4px;background:#fff;min-height:30px;align-items:center}
-  .chip{display:inline-flex;align-items:center;gap:4px;background:#f1efe9;border-radius:10px;padding:1px 4px 1px 2px;font-size:11px}
-  .chip .avatar{width:16px;height:16px;font-size:8px}
-  .chip .x{cursor:pointer;color:var(--ink-2);font-size:11px;line-height:1;padding:0 3px}
-  .chip .x:hover{color:var(--ink)}
-  .chip-add{font-size:11px;color:var(--ink-2);padding:1px 4px;cursor:pointer;align-self:center}
-  .chip-add:hover{color:var(--ink)}
-  .member-list{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
-  .member-list .chip{
-    background:transparent;border-radius:20px;
-    padding:3px 6px 3px 3px;gap:6px;font-size:12px;font-weight:500;color:var(--ink);
-  }
-  .member-list .chip .avatar{width:20px;height:20px;font-size:10px;flex:0 0 20px}
-  .member-list .chip .x{opacity:0;transition:opacity .12s;font-size:13px;line-height:1;color:var(--ink-3);padding:0 0 0 2px}
-  .member-list .chip:hover{background:#f1efe9}
-  .member-list .chip:hover .x{opacity:1}
-  .member-list .chip .x:hover{color:var(--ink)}
-  .add-member-btn{
-    display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 10px 0 6px;min-width:108px;
-    border-radius:20px;background:transparent;border:1px dashed var(--line-strong);
-    color:var(--ink-2);font-size:12px;cursor:pointer;
-  }
-  .add-member-btn:hover{background:#f1efe9;color:var(--ink)}
-
-  .dropdown{
-    position:fixed;background:#fff;border:1px solid var(--line-strong);
-    border-radius:4px;box-shadow:0 4px 10px rgba(0,0,0,.06);
-    z-index:1000;min-width:160px;max-height:220px;overflow:auto;font-size:12px;
-  }
-  .dropdown .opt{padding:5px 8px;cursor:pointer;display:flex;align-items:center;gap:6px}
-  .dropdown .opt:hover{background:#f5f3ee}
-  .dropdown .opt.disabled{opacity:.45;cursor:not-allowed;display:none}
-  .dropdown .opt .opt-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .dropdown .opt .opt-current{
-    font-size:10px;color:var(--ink-2);
-    padding:1px 6px;border:1px solid var(--line);border-radius:8px;
-    text-transform:uppercase;letter-spacing:.4px;
-  }
-  .dropdown .opt.is-current{background:#fafaf6}
-  .dropdown .opt.is-current .opt-name{font-weight:600;color:var(--ink)}
-
-  /* Transparent scrim used to capture clicks behind a popover so that
-     hovering over the board doesn't trigger cell/milestone hover effects.
-     Empty cells & lanes get covered, but existing work items and milestones
-     are elevated above the scrim so the user can still hover/click them. */
-  .popover-scrim{position:fixed;inset:0;background:transparent;z-index:250}
-  /* member-row creates its own stacking context (z-index:7), so the .wi inside
-     can't simply jump above the scrim without lifting the row itself. */
-  body:has(.popover-scrim) .milestone{z-index:260}
-  /* Member rows must sit above milestones so the sticky member-side (within the row's
-     stacking context) actually covers the milestone vertical line at the sidebar column. */
-  body:has(.popover-scrim) .member-row{z-index:265}
-  /* Keep the project sidebar covering elevated milestones/work items at its column. */
-  body:has(.popover-scrim) .project-side,
-  body:has(.popover-scrim) .member-side{z-index:270}
-  /* But lifting the row would also lift its empty lane above the scrim. Make the
-     entire row transparent to pointer events so clicks fall through to the scrim
-     (closing the popover), and only re-enable events on .wi so they stay clickable. */
-  body:has(.popover-scrim) .member-row{pointer-events:none}
-  body:has(.popover-scrim) .member-row .wi{pointer-events:auto}
-  /* When a popover is open, give the milestone hover-card area a real hit element
-     so the cursor can move from flag → card padding without losing the hover state. */
-  body:has(.popover-scrim) .milestone .ms-hit{pointer-events:auto;cursor:grab}
-
-  /* Top-right trash button on instant-save popovers — aligned with the title line. */
-  .popover{position:fixed}
-  .popover-trash{
-    position:absolute;top:8px;right:8px;z-index:2;
-    width:26px;height:26px;border-radius:4px;
-    display:flex;align-items:center;justify-content:center;
-    color:var(--ink-3);background:transparent;
-  }
-  .popover-trash:hover{background:var(--status-off-bg);color:var(--status-off)}
-  .popover-trash svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.1;stroke-linecap:round;stroke-linejoin:round}
-
-  /* Light confirmation bar overlaying the popover's first row (member + dates). */
-  .trash-confirm{
-    position:absolute;top:6px;left:6px;right:6px;z-index:5;
-    background:var(--status-off-bg);
-    border-radius:4px;
-    padding:5px 8px 5px 10px;display:flex;align-items:center;gap:8px;
-    font-size:12px;color:var(--ink);
-  }
-  .trash-confirm .msg{flex:1;color:var(--ink)}
-  .trash-confirm .actions{display:flex;gap:6px;flex-shrink:0}
-  .trash-confirm button{
-    height:22px;padding:0 8px;border-radius:3px;font-size:11px;font-weight:500;
-    border:1px solid var(--line-strong);background:#fff;color:var(--ink);
-  }
-  .trash-confirm button.yes{background:var(--status-off);color:#fff;border-color:var(--status-off)}
-  .trash-confirm button.yes:hover{background:#b81818}
-  .trash-confirm button.no:hover{background:#faf8f3}
-
-  /* Popovers (milestone / work item) */
-  .popover{
-    position:fixed;background:#fff;border:1px solid var(--line-strong);
-    border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.08);
-    width:280px;font-size:12px;z-index:300;
-  }
-  .popover-head{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--line)}
-  .popover-title{font-size:12px;font-weight:600;color:var(--ink)}
-  .popover-body{padding:10px 16px;display:flex;flex-direction:column;gap:8px}
-  .popover-body .field{margin-bottom:0}
-  /* Inputs sit flush with their text but the box visually extends 8px outward
-     into the popover's horizontal padding, so the hover/focus border breathes
-     to the left/right of the value. */
-  .popover-body .field input,
-  .popover-body .field select,
-  .popover-body .field textarea{margin:0 -8px;padding:5px 8px;width:calc(100% + 16px)}
-  /* Display-mode fields inside popovers: show as plain text by default,
-     reveal input chrome only on hover or focus. */
-  .popover-body .field input,
-  .popover-body .field select,
-  .popover-body .field textarea{
-    border-color:transparent;background:transparent;cursor:pointer;
-    transition:border-color .12s, background .12s;
-  }
-  .popover-body .field:hover input,
-  .popover-body .field:hover select,
-  .popover-body .field:hover textarea,
-  .popover-body .field input:focus,
-  .popover-body .field select:focus,
-  .popover-body .field textarea:focus{
-    border-color:var(--line-strong);background:#fff;cursor:auto;
-  }
-  .popover-body .field input:focus,
-  .popover-body .field textarea:focus{cursor:text}
-  /* Hide the date picker's calendar icon and select arrow until hover so the
-     fields read as plain text in display mode. */
-  .popover-body .field input[type="date"]::-webkit-calendar-picker-indicator{opacity:0;transition:opacity .12s}
-  .popover-body .field:hover input[type="date"]::-webkit-calendar-picker-indicator,
-  .popover-body .field input[type="date"]:focus::-webkit-calendar-picker-indicator{opacity:.6}
-  .popover-foot{display:flex;justify-content:space-between;gap:6px;padding:8px 10px;border-top:1px solid var(--line);background:#fafaf6;border-radius:0 0 6px 6px}
-  /* Title-as-input variant: shows the work item label as the popover's first-line heading. */
-  .popover-title-input{
-    font-size:13px;font-weight:600;color:var(--ink);line-height:1.35;
-    border:none;border-radius:4px;
-    background:transparent;margin:0 -8px;padding:5px 8px;width:calc(100% + 16px);box-sizing:border-box;
-    outline:none;font-family:inherit;cursor:pointer;
-    transition:box-shadow .12s, background .12s;
-    resize:none;overflow:hidden;field-sizing:content;
-    word-break:break-word;white-space:pre-wrap;
-    display:block;
-  }
-  .popover-title-input:hover, .popover-title-input:focus{box-shadow:inset 0 0 0 1px var(--line-strong);background:#fff;cursor:text}
-
-  /* Title-as-button variant: same look as popover-title-input but used as a click target
-     to open a custom dropdown. Chevron is hidden by default and only revealed on hover. */
-  .popover-title-pick{
-    font-size:13px;font-weight:600;color:var(--ink);line-height:1.35;
-    border:none;border-radius:4px;
-    background:transparent;margin:0 -8px;padding:5px 22px 5px 8px;width:calc(100% + 16px);box-sizing:border-box;
-    outline:none;font-family:inherit;cursor:pointer;text-align:left;
-    background-image:none;background-repeat:no-repeat;background-position:right 6px center;
-    transition:box-shadow .12s, background .12s, background-image .12s;
-    display:block;
-  }
-  .popover-title-pick:hover, .popover-title-pick.is-open{
-    box-shadow:inset 0 0 0 1px var(--line-strong);background-color:#fff;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 4l3 3 3-3' fill='none' stroke='%23888' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-  }
-
-  /* Inline assignee picker — avatar-only; full name shown via floating tooltip on hover. */
-  .assignee-pick{
-    display:inline-flex;align-items:center;justify-content:center;
-    width:24px;height:24px;flex:0 0 24px;
-    margin:0;padding:3px;border:none;border-radius:4px;
-    background:transparent;cursor:pointer;
-    transition:box-shadow .12s, background .12s;
-  }
-  .assignee-pick:hover{box-shadow:inset 0 0 0 1px var(--line-strong);background:#fff}
-  .assignee-pick .avatar{width:18px;height:18px;font-size:9px;flex:0 0 18px}
-  .assignee-pick .name{display:none}
-
-  /* Notes textarea inside popovers — no resize grip, auto-grow with content. */
-  .popover-body .field textarea{resize:none;overflow:hidden;field-sizing:content;line-height:1.4}
-
-  /* Jira link display state: shows the parsed key as a hyperlink with a hover-only delete button. */
-  .jira-display{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:12px}
-  .jira-display a{color:var(--link);font-weight:500}
-  .jira-display a:hover{text-decoration:underline}
-  .jira-display .x-btn{
-    width:16px;height:16px;display:none;align-items:center;justify-content:center;
-    border-radius:3px;color:var(--ink-2);font-size:11px;line-height:1;
-  }
-  .jira-display:hover .x-btn{display:flex}
-  .jira-display .x-btn:hover{background:var(--status-off-bg);color:var(--status-off)}
-
-  /* Inline milestone "type" tag — flag-shaped (matches the timeline ms-flag). */
-  .type-tag{
-    display:inline-flex;align-items:center;
-    padding:4px 18px 4px 8px;margin-right:6px;
-    font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
-    color:#fff;background:var(--tag-bg,#888);
-    border:none;cursor:pointer;
-    font-family:"Barlow Condensed",sans-serif;line-height:1;
-    clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%);
-    transition:filter .12s;
-  }
-  .type-tag:hover{filter:brightness(1.06)}
-
-  /* Duration row: two compact date buttons (custom-rendered text + hidden picker). */
-  .duration-row{display:flex;align-items:center;gap:4px;align-self:flex-start;margin-left:-8px;position:relative}
-  .duration-sep{color:var(--ink-2);font-size:12px;line-height:1}
-  .date-btn{
-    margin:0;padding:4px 6px;font:inherit;font-size:12px;color:var(--ink);
-    background:transparent;border:none;border-radius:4px;cursor:pointer;outline:none;
-    transition:background .12s, box-shadow .12s;
-    line-height:1.2;
-  }
-  .date-btn:hover,.date-btn:focus{background:#fff;box-shadow:inset 0 0 0 1px var(--line-strong)}
-  /* .date-btn variant that opens a custom dropdown — chevron only on hover/open. */
-  .date-btn.date-btn-pick{
-    padding-right:18px;
-    background-image:none;background-repeat:no-repeat;background-position:right 4px center;
-    transition:background .12s, box-shadow .12s, background-image .12s;
-  }
-  .date-btn.date-btn-pick:hover, .date-btn.date-btn-pick.is-open{
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M2 4l3 3 3-3' fill='none' stroke='%23888' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/></svg>");
-  }
-  .date-btn-input{position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;border:none;padding:0;margin:0}
-  .popover-foot .right{display:flex;gap:6px}
-
-  /* Right side panel */
-  .side-panel{
-    position:fixed;top:0;right:0;height:100vh;width:340px;background:#fff;
-    border-left:1px solid var(--line-strong);box-shadow:-2px 0 8px rgba(0,0,0,.04);
-    z-index:200;display:flex;flex-direction:column;font-size:12px;
-  }
-  .side-panel .panel-head{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line)}
-  .side-panel .panel-title{font-size:11px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.4px}
-  .side-panel .panel-body{flex:1;overflow:auto;padding:12px}
-  .side-panel .panel-foot{padding:10px 12px;border-top:1px solid var(--line);display:flex;justify-content:space-between;background:#fafaf6}
-
-  .project-edit-modal .modal-body textarea[data-bind="desc"]{
-    border-color:transparent;background:transparent;cursor:pointer;
-    transition:border-color .12s, background .12s;
-    margin:0 -8px;padding:5px 8px;width:calc(100% + 16px);box-sizing:border-box;
-    resize:none;field-sizing:content;min-height:0;
-  }
-  .project-edit-modal .modal-body textarea[data-bind="desc"]:hover,
-  .project-edit-modal .modal-body textarea[data-bind="desc"]:focus{
-    border-color:var(--line-strong);background:#fff;cursor:text;
-  }
-  .project-edit-modal{width:480px}
-  /* Keep the project-edit modal scrim above the milestone popover-scrim so list
-     rows behind a popover stay hover/clickable; the popover itself (z=300) still
-     sits above this. */
-  .scrim:has(.modal.project-edit-modal){z-index:290}
-  /* While a popover is open, only milestone rows in the modal stay interactive;
-     other elements (inputs, buttons, add-milestone) are dimmed-by-events so a
-     click on them just dismisses the popover without firing their action. */
-  body:has(.popover-scrim) .modal.project-edit-modal *{pointer-events:none}
-  body:has(.popover-scrim) .modal.project-edit-modal,
-  body:has(.popover-scrim) .modal.project-edit-modal .ms-list-row,
-  body:has(.popover-scrim) .modal.project-edit-modal .ms-list-row *{pointer-events:auto}
-  .project-edit-modal{overflow:hidden;border:0}
-  .project-edit-modal .modal-color-band{height:12px}
-  .project-edit-modal .modal-body{padding:20px 24px}
-  .project-edit-modal .modal-foot{padding:12px 24px}
-  .project-edit-modal .color-swatches{gap:12px;margin-top:6px}
-  .project-edit-modal .color-swatches .sw{width:24px;height:24px}
-  .project-edit-modal .modal-body .field{margin-bottom:18px}
-  .project-edit-modal .modal-body .field-row{margin-bottom:18px}
-  .project-edit-modal .modal-body .field-row .field{margin-bottom:0}
-  .project-edit-modal .modal-body .section-head{margin-top:22px}
-  .project-edit-modal .modal-title-input{margin-bottom:14px}
-  .modal-title-input{
-    font-size:14px;font-weight:600;color:var(--ink);line-height:1.35;
-    border:none;border-radius:4px;
-    background:transparent;margin:0 -8px 4px;padding:6px 8px;width:calc(100% + 16px);box-sizing:border-box;
-    outline:none;font-family:inherit;cursor:pointer;
-    transition:box-shadow .12s, background .12s;
-    resize:none;overflow:hidden;field-sizing:content;
-    word-break:break-word;white-space:pre-wrap;
-    display:block;
-  }
-  .modal-title-input:hover,.modal-title-input:focus{box-shadow:inset 0 0 0 1px var(--line-strong);background:#fff;cursor:text}
-  .title-req-wrap{position:relative}
-  .title-req-wrap .title-req-row{
-    position:absolute;left:0;top:6px;padding:0 8px;
-    font-size:14px;font-weight:600;line-height:1.35;
-    pointer-events:none;display:flex;gap:1px;
-  }
-  .title-req-wrap .title-req-ghost{visibility:hidden;white-space:pre}
-  .title-req-wrap .title-req{color:#d42020}
-  .title-req-wrap:has(.modal-title-input:not(:placeholder-shown)) .title-req-row{display:none}
-  .owner-pick-btn{
-    display:inline-flex;align-items:center;gap:6px;
-    padding:3px 6px 3px 3px;border-radius:20px;background:transparent;border:0;
-    font-size:12px;font-weight:500;color:var(--ink);cursor:pointer;width:fit-content;
-  }
-  .owner-pick-btn .avatar{width:20px;height:20px;font-size:10px;flex:0 0 20px}
-  .owner-pick-btn:hover{background:#f1efe9}
-  .status-pick{
-    display:inline-flex;align-items:center;justify-content:center;
-    width:fit-content;min-width:80px;height:22px;padding:0 12px;border-radius:3px;
-    font-family:"Barlow Condensed",sans-serif;font-size:12px;font-weight:700;
-    letter-spacing:0;text-transform:uppercase;color:#fff;border:0;cursor:pointer;
-  }
-  .status-pick.ontrack{background:#3a9e3f}
-  .status-pick.atrisk{background:#f0a500}
-  .status-pick.offtrack{background:#d42020}
-  .status-pick.archived{background:#8a8579}
-  .dur-pick{
-    display:inline-flex;align-items:center;gap:4px;
-    height:24px;padding:0 10px;border-radius:4px;
-    background:#fff;border:1px solid var(--line-strong);
-    font-size:12px;color:var(--ink);cursor:pointer;width:fit-content;
-  }
-  .dur-pick:hover{background:#f1efe9}
-  .dur-pick::after{content:"▾";color:var(--ink-3);font-size:10px;margin-left:2px}
-  .dur-field{flex-direction:row;align-items:center;gap:10px}
-  .dur-field > label{margin:0;flex:0 0 auto;font-size:12px;font-weight:400;letter-spacing:0;text-transform:uppercase;color:var(--ink-3)}
-
-  .color-swatches{display:flex;gap:6px;flex-wrap:wrap}
-  .color-swatches .sw{width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid #fff;outline:1px solid var(--line-strong);outline-offset:0}
-  .color-swatches .sw.active{outline:2px solid var(--ink);outline-offset:1px}
-
-  .section-head{font-size:10px;font-weight:600;color:var(--ink-2);letter-spacing:.4px;text-transform:uppercase;margin:14px 0 6px;display:flex;justify-content:space-between;align-items:center}
-  .ms-list-row{display:flex;align-items:center;gap:8px;padding:5px 6px;border:1px solid var(--line);border-radius:4px;margin-bottom:4px;background:#fff;cursor:pointer;transition:background .12s, border-color .12s}
-  .ms-list-row:hover{background:#faf8f3;border-color:var(--line-strong)}
-  .ms-list-row.is-selected{background:#f1efe9;border-color:var(--ink-2)}
-  .ms-list-row.is-confirming:hover,
-  .ms-list-row.is-selected.is-confirming{background:var(--status-off-bg);border-color:var(--status-off)}
-  .ms-list-row .ms-dot{width:8px;height:8px;border-radius:50%;background:var(--ms,#ccc);flex:0 0 8px}
-  .ms-list-row .ms-name{flex:1;font-size:12px;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .ms-list-row .ms-meta{font-size:11px;color:var(--ink-2);font-family:"IBM Plex Mono",ui-monospace,monospace}
-  .ms-list-row .x-btn{color:var(--ink-2);width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:3px}
-  .ms-list-row .x-btn:hover{color:var(--status-off);background:var(--status-off-bg)}
-  .ms-list-row.is-confirming{justify-content:space-between;background:var(--status-off-bg);border-color:var(--status-off)}
-  .ms-list-row .ms-confirm-msg{flex:1;font-size:12px;color:var(--ink)}
-  .ms-list-row .ms-confirm-actions{display:flex;gap:6px}
-  .ms-list-row .ms-confirm-actions button{
-    height:18px;padding:0 8px;border-radius:3px;font-size:11px;font-weight:500;
-    border:1px solid var(--line-strong);background:#fff;color:var(--ink);cursor:pointer;
-  }
-  .ms-list-row .ms-confirm-actions button.yes{background:var(--status-off);color:#fff;border-color:var(--status-off)}
-  .ms-list-row .ms-confirm-actions button.yes:hover{background:#b81818}
-  .ms-list-row .ms-confirm-actions button.no:hover{background:#faf8f3}
-  .add-ms-btn{
-    display:flex;align-items:center;justify-content:center;gap:6px;width:100%;
-    height:30px;padding:0 8px;border-radius:4px;
-    background:transparent;border:1px dashed var(--line-strong);
-    color:var(--ink-2);font-size:12px;cursor:pointer;margin-top:4px;
-  }
-  .add-ms-btn:hover{background:#faf8f3;color:var(--ink)}
-
-  /* Drag tooltip */
-  .drag-tip{
-    position:fixed;background:#1f1d18;color:#fff;padding:3px 8px;border-radius:3px;
-    font-size:10px;font-family:"IBM Plex Mono",ui-monospace,monospace;
-    z-index:10001;pointer-events:none;white-space:nowrap;letter-spacing:.2px;
-    box-shadow:0 2px 6px rgba(0,0,0,.18);
-  }
-  .wi.is-dragging,.milestone.is-dragging{opacity:.85;z-index:30}
-  .wi .wi-handle{cursor:ew-resize}
-  body.is-item-dragging{ user-select:none; -webkit-user-select:none }
-  /* When dragging a work item's left/right resize handle OR dragging a milestone,
-     keep the cursor as the horizontal resize arrows regardless of what's under it. */
-  body.is-item-resizing,
-  body.is-item-resizing .wi,
-  body.is-item-resizing .wi *,
-  body.is-item-resizing .milestone,
-  body.is-item-resizing .milestone *{cursor:ew-resize !important}
-
-  /* Inline jira-import loading line */
-  .jira-loading{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--ink-2);padding:4px 0}
-  .jira-loading .spinner{width:10px;height:10px;border:1.5px solid var(--line-strong);border-top-color:var(--ink);border-radius:50%;animation:spin 700ms linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
-
-  /* Empty state */
-  .empty-state{
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    padding:60px 20px;text-align:center;color:var(--ink-2);
-    position:absolute;top:120px;left:0;right:0;z-index:1;
-  }
-  .empty-state .es-title{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px}
-  .empty-state .es-desc{font-size:12px;color:var(--ink-2);max-width:360px;margin:0 0 14px;line-height:1.45}
-
-  /* Add-Project icon-only button — borderless, expands rightward on hover so
-     the + visually moves left and the label trails it. */
-  .header-left .add-project-pill{
-    height:18px;padding:0 4px;border:0;border-radius:4px;
-    background:transparent;color:var(--ink);font-size:11px;font-weight:500;
-    display:inline-flex;align-items:center;gap:0;overflow:hidden;cursor:pointer;
-    align-self:end;margin-bottom:-3px;
-  }
-  .header-left .add-project-pill .label{
-    display:inline-block;white-space:nowrap;overflow:hidden;
-    max-width:0;opacity:0;margin-left:0;
-    transition:max-width 200ms ease, opacity 150ms ease, margin-left 200ms ease;
-  }
-  .header-left .add-project-pill:hover{background:#f1efe9;color:var(--ink)}
-  .header-left .add-project-pill:hover .label{ max-width:90px;opacity:1;margin-left:4px }
-
-  /* Make project title / key / status clickable */
-  .project-title,.key-row,.status{cursor:pointer}
-  .project-title:hover{text-decoration:underline;text-decoration-color:rgba(0,0,0,.3);text-underline-offset:2px}
-  .key-row:hover{color:var(--ink)}
-
-  /* ------------ Team view (reuses .project-group / .project-side / .project-lane / .member-row / .member-side / .member-lane) ------------ */
-  .team-side .project-head{gap:8px}
-  .team-side .project-head .avatar{width:24px;height:24px;font-size:10px;flex:0 0 24px}
-  .team-side .project-title{flex:0 1 auto;font-size:15px}
-  .team-side .workload-tag{font-size:12px;margin-right:auto}
-  .team-side .key-row{font-family:inherit;color:var(--ink-2);font-size:12px}
-  .team-side .team-toggle{
-    display:inline-flex;align-items:center;gap:6px;
-    padding:4px 6px;margin-left:26px;align-self:flex-start;
-    border-radius:10px;background:transparent;
-    color:var(--ink-2);font-size:12px;line-height:1.2;
-    cursor:pointer;transition:background .12s, color .12s;
-  }
-  .team-side .team-toggle:hover{background:#f1efe9;color:var(--ink)}
-  .team-side .team-toggle .team-toggle-chev{transition:transform .15s;flex:0 0 9px}
-  .project.has-members .team-side .team-toggle .team-toggle-chev{transform:rotate(180deg)}
-  /* Neutral team-member summary background — work item bars carry the project color. */
-  .project-group.team-group .project-lane{background-color:#fff}
-  /* Match the visual weight of the lane's week-vertical gridlines (rgba 0.18, 1px). */
-  .project-group.team-group{margin-bottom:0;border-bottom:1px solid rgba(0,0,0,0.18)}
-  .member-row.team-project-row .member-side::before{
-    left:auto;right:10px;top:50%;bottom:auto;
-    width:6px;height:6px;border-radius:50%;
-    transform:translateY(-50%);
-    background:var(--tint, #ccc);
-  }
-  /* Match the project row background to the empty workload cell tone. */
-  .member-block.team-block{background-color:#f9f9f9}
-  .member-block.team-block .member-side{background:#fff}
-  /* Hide the tint background by default — only reveal on hover. */
-  .member-row.team-project-row{--cell-bg:#f9f9f9;--cell-tint:transparent}
-  .member-row.team-project-row .member-side::after,
-  .member-row.team-project-row .member-lane::before{opacity:0;transition:opacity .15s}
-  /* Suppress the opacity transition for one frame right after a drag commit
-     re-mounts the DOM, so the freshly applied .is-drag-source-row highlight
-     doesn't fade in (which would visibly flicker). */
-  .member-row.is-render-locked .member-side::after,
-  .member-row.is-render-locked .member-lane::before{transition:none !important}
-  body:not(.is-proj-dragging):not(.is-item-dragging) .member-row.team-project-row:hover .member-side::after,
-  body:not(.is-proj-dragging):not(.is-item-dragging) .member-row.team-project-row:hover .member-lane::before,
-  /* Source-row override (team view) — held across the post-release re-render. */
-  .member-row.team-project-row.is-drag-source-row .member-side::after,
-  .member-row.team-project-row.is-drag-source-row .member-lane::before{opacity:1}
-  /* Compact team rows — match the sidebar padding to the content height. */
-  .project-group.team-group .project-summary{height:76px}
-  /* Per-day workload cells — fills the full day cell, vertically split by project. */
-  .team-load-cell{
-    position:absolute;top:12px;bottom:12px;
-    width:var(--day-w);left:0;
-    box-sizing:border-box;pointer-events:none;
-    padding:0 4px;
-    /* Each cell is layout/paint-isolated so a scroll only repaints the cells
-       that actually scroll into view (the timeline has ~3500 of these and they
-       were dominating paint cost during pan). content-visibility:auto lets
-       the browser skip work for off-screen cells entirely; contain-intrinsic
-       -size reserves their layout box without forcing a measure. */
-    contain: layout paint style;
-    content-visibility: auto;
-    contain-intrinsic-size: var(--day-w) 52px;
-  }
-  .board.is-week-mode .team-load-cell{padding:0 2px}
-  .team-load-block{border-radius:6px;overflow:hidden;box-sizing:border-box;border:2px solid var(--bd,transparent);position:relative}
-  .team-load-cell.is-empty .team-load-block{background:rgba(0,0,0,0.025);cursor:pointer}
-  /* Single roaming overlay per team-summary (one overlay total, not one per
-     cell): provides BOTH the hover tint and the "+" affordance. Follows the
-     cursor via setupTeamSummaryAddHover. */
-  .team-load-add-overlay{
-    position:absolute;top:12px;bottom:12px;
-    width:var(--day-w);
-    padding:0 4px;box-sizing:border-box;
-    display:none;align-items:center;justify-content:center;
-    pointer-events:none;z-index:2;
-  }
-  .team-load-add-overlay.is-active{display:flex}
-  /* The tint sits inside the cell's content area (matching the cell's 4px
-     horizontal padding and rounded corners). Cells with actual work items
-     get a more saturated tint so the hover affordance reads strongly over
-     the colored workload stripes. When hovering a specific stripe inside a
-     multi-stripe cell, JS sets --hl-top/--hl-bottom so the tint clips to
-     just that stripe's vertical band — see setupTeamSummaryAddHover. */
-  .team-load-add-overlay::before{
-    content:'';position:absolute;
-    top:var(--hl-top, 0);bottom:var(--hl-bottom, 0);
-    left:4px;right:4px;
-    background:rgba(0,0,0,0.045);
-    border-radius:6px;
-    pointer-events:none;
-  }
-  /* Occupied cells: instead of darkening, lift the underlying stripe color's
-     saturation and brightness so the hovered work item feels emphasized,
-     not muted. backdrop-filter only takes effect when there's content
-     beneath the pseudo-element — empty cells fall back to the gray tint. */
-  .team-load-add-overlay.is-occupied::before{
-    background:none;
-    backdrop-filter:saturate(1.55) brightness(1.06);
-    -webkit-backdrop-filter:saturate(1.55) brightness(1.06);
-  }
-  .team-load-add{
-    pointer-events:auto;position:relative;
-    width:20px;height:20px;
-    background:none;border:0;border-radius:50%;
-    font-size:16px;line-height:1;font-weight:500;font-family:inherit;
-    color:var(--ink-2);cursor:pointer;
-    display:none;align-items:center;justify-content:center;
-    padding:0;
-    transition:background-color 80ms;
-  }
-  /* "+" shows on empty cells AND cells with workload (so the user can stack
-     time off on top of an existing assignment). It's hidden only on cells
-     that already carry a leave — those open the time-off popover via a
-     direct click on the leave stripe. */
-  .team-load-add-overlay.is-addable .team-load-add{display:flex}
-  /* Hover state surfaces the button's padded hotzone: a tinted pill behind
-     the "+" sits above the overlay's cell tint, so the user gets a clear
-     "this is the actual click target" cue distinct from the cell highlight. */
-  .team-load-add:hover{color:var(--ink);background:rgba(0,0,0,0.07)}
-  .team-load-stripe:first-child{border-top-left-radius:0;border-top-right-radius:0}
-  .team-load-stripe:last-child{border-bottom-left-radius:0;border-bottom-right-radius:0}
-  .team-load-stripe.is-leave + .team-load-stripe{border-top-left-radius:4px;border-top-right-radius:4px}
-  /* Team workload row: keep only week boundaries; drop the per-day gridlines. */
-  .project-group.team-group .project-lane{
-    background-image:linear-gradient(to right, rgba(0,0,0,0.18) 1px, transparent 1px);
-    background-size: calc(var(--day-w) * 5) 100%;
-  }
-  .team-load-block{
-    width:100%;height:100%;
-    display:flex;flex-direction:column;
-    pointer-events:auto;
-  }
-  .team-load-stripe{
-    flex:1 1 0;min-height:0;background:var(--blk,#dcd9d2);
-  }
-  .team-load-stripe.is-leave:not(:only-child){flex:0 0 50%}
-  .team-load-stripe.is-empty-half{flex:0 0 50%;background:rgba(0,0,0,0.025)}
-  .team-load-stripe.is-leave{
-    /* Hatch lives inside the workload block (clipped by its rounded border)
-       so the diagonal pattern doesn't bleed into the surrounding cell. */
-    background:
-      repeating-linear-gradient(-45deg, #dcdcdc 0 4px, #f9f9f9 4px 8px);
-    box-shadow:inset 0 0 0 1px #dcdcdc;
-    display:flex;align-items:center;justify-content:center;
-    font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-    font-size:11px;font-weight:800;letter-spacing:.5px;
-    color:#dcdcdc;
-    cursor:pointer;
-  }
-  .team-load-stripe.is-leave .pto-tag{
-    background:#f9f9f9;padding:1px 4px;border-radius:5px;
-    color:#dcdcdc;text-transform:uppercase;font-size:9px;
-    display:inline-block;max-width:calc(100% - 16px);
-    overflow:hidden;white-space:nowrap;
-    box-sizing:border-box;min-width:0;
-  }
-  .team-load-stripe.is-empty-half + .team-load-stripe.is-leave{
-    border:2px solid #bdbab2;
-    border-radius:4px 4px 0 0;
-    box-shadow:none;
-    box-sizing:border-box;
-  }
-  /* Hide the 6px tint stripe on the team summary header — keep the row visually neutral. */
-  .project-side.team-side::before{display:none}
-  .project-side.team-side{padding-left:14px}
-  /* Team summary lane uses the same height as the project summary lane so
-     the sidebar and lane stay visually aligned. */
-  /* Child project rows under a team member — show the project key in mono, like the existing key-row. */
-  .member-row.team-project-row .member-side{padding-left:46px}
-  .member-row.team-project-row .member-name{font-weight:500}
-  .member-row.team-project-row .member-role{font-family:"IBM Plex Mono",ui-monospace,monospace;letter-spacing:.2px}
-  /* "Others" row — neutral gray; sits at the bottom of each member's stack
-     and surfaces work that isn't tracked on this board. */
-  .member-row.team-others-row .member-name{
-    color:var(--ink-3);font-weight:500;
-  }
-  /* Indicator dot for Others rows: dashed gray outline, no fill — to mirror
-     the dashed wi outline and stay distinct from project-colored solid dots. */
-  .member-row.team-others-row .member-side::before{
-    background:transparent;
-    width:8px;height:8px;
-    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='6.5' fill='none' stroke='%23bdbab2' stroke-width='1.5' stroke-dasharray='3 2'/></svg>");
-    background-size:100% 100%;
-  }
-  .member-row.team-others-row .wi .wi-label{color:var(--ink-2)}
-  /* Replace the default solid ::after border with an SVG outline that gives
-     us control over the dash pattern (longer dashes than border:dashed).
-     border-radius on the .wi itself makes the parent's overflow:clip honor
-     the rounded corners — without it the SVG stroke's curved arcs would be
-     truncated by the rectangular clip box and the corners look square. */
-  .wi.is-others{border-radius:4px}
-  .wi.is-others::after{display:none}
-  .wi.is-others .wi-outline{
-    position:absolute;inset:0;width:100%;height:100%;
-    pointer-events:none;z-index:1;
-  }
-  /* "Show N projects" collapsed hint, styled like the owner-chip. */
-  .team-side .team-collapse-hint{
-    display:inline-flex;align-items:center;gap:6px;
-    padding:3px 8px 3px 4px;border-radius:20px;
-    font-size:12px;font-weight:500;color:var(--ink-2);
-  }
-  .team-side .owner-row:hover .team-collapse-hint{background:#f1efe9;color:var(--ink)}
-
-  /* Workload tag — same shape as status tag but more subtle. */
-  .workload-tag{
-    font-family:"Barlow Condensed",sans-serif;
-    font-size:11px;font-weight:700;letter-spacing:0;text-transform:uppercase;
-    width:54px;text-align:center;
-    padding:2px 0;border-radius:3px;flex:0 0 54px;
-    color:var(--ink-2);background:#ece9e1;
-  }
-  .workload-tag.light{color:#5a8a5e;background:#e1ecdf}
-  .workload-tag.normal{color:var(--ink-2);background:#ece9e1}
-  .workload-tag.heavy{color:#a36100;background:#fce5c2}
-
-  /* Active-Projects label (header-left) repurposed for team view. */
-  .team-board .active-projects{cursor:default}
-  .team-board .active-projects:hover{color:var(--ink-2)}
-  .team-board .active-projects svg{display:none}
-
-  /* Empty state for team view sits inside the rows container. */
-  .team-empty{padding:60px 20px;text-align:center}
-  .team-empty .es-title{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px}
-  .team-empty .es-desc{font-size:12px;color:var(--ink-2);max-width:360px;margin:0 auto;line-height:1.45}
-</style>
-</head>
-<body>
-<div class="app" id="app"></div>
-
-<script>
 /* ============================================================
- *  Centralized mock data
+ *  Mission Control — board UI
+ *
+ *  Data lives on the server (see /server). This file keeps an in-memory
+ *  copy in the shapes the renderers below were built around:
+ *    PROJECTS        [{ id, title, key, status, tint, description,
+ *                       startDate:{mode,date}, endDate:{mode,date},
+ *                       members:[{id,userId,role}], milestones:[...], items:[...] }]
+ *    TEAM_OTHERS     userId -> work items that belong to no project
+ *    MEMBER_LEAVES   userId -> time-off entries
+ *    USERS           userId -> { id, name, email, active, isAdmin }
+ *  Every edit updates this copy immediately (so the UI stays snappy) and is
+ *  saved through the `Save` helpers; changes made by teammates arrive over
+ *  the realtime stream and are merged in by `applyRemoteEvent`.
+ *
+ *  All dates are 'YYYY-MM-DD' strings (calendar days, no timezone).
  * ============================================================ */
-/* Mocked "today" for the prototype */
-const MOCK_TODAY = new Date(2026, 3, 29); // Apr 29, 2026
-/* Sprint anchor: Apr 27, 2026 (Mon) is Sprint 29, Week 1, day 0 */
-const SPRINT_ANCHOR = new Date(2026, 3, 27);
-const SPRINT_ANCHOR_NUM = 29;
 
+/* ------------------------------------------------------------
+ *  Calendar + timeline
+ * ------------------------------------------------------------ */
 const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-const MONTH_IDX = Object.fromEntries(MONTHS.map((m,i)=>[m,i]));
 const DOW = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
 
 function isWorkday(d){ const x=d.getDay(); return x!==0 && x!==6; }
 function addDays(d,n){ const c=new Date(d); c.setDate(c.getDate()+n); return c; }
+function toISODate(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function parseISODate(s){
+  const [y,m,d] = String(s).split('-').map(Number);
+  return new Date(y, (m||1)-1, d||1);
+}
+/* Today in the viewer's own timezone — teammates in different timezones each see their own "today". */
+function localToday(){ const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+function todayISO(){ return toISODate(localToday()); }
+const capWord = s => s.charAt(0) + s.slice(1).toLowerCase();
+/* "MAY 4" — compact label used in lists and pickers. */
+function fmtShortDate(iso){ const d = parseISODate(iso); return `${MONTHS[d.getMonth()]} ${d.getDate()}`; }
+/* "2026/05/04" — label on the date buttons in popovers. */
+function fmtSlashDate(iso){ return String(iso || '').replace(/-/g, '/'); }
+
+let TODAY = localToday();
+let SPRINT = { anchorDate: '2026-04-27', anchorNumber: 29 };
+function sprintAnchor(){ return parseISODate(SPRINT.anchorDate); }
 
 function workdayDelta(date){
-  // signed workday count between SPRINT_ANCHOR and date
-  const a = new Date(SPRINT_ANCHOR.getFullYear(), SPRINT_ANCHOR.getMonth(), SPRINT_ANCHOR.getDate());
+  // signed workday count between the sprint anchor and date
+  const anchor = sprintAnchor();
+  const a = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
   const b = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   if(b.getTime() === a.getTime()) return 0;
   const sign = b > a ? 1 : -1;
@@ -1392,49 +64,75 @@ function workdayDelta(date){
 
 function buildTimeline(){
   // Range: 6 months back to 12 months forward, snapped to Mon..Fri week boundaries
-  let start = new Date(MOCK_TODAY); start.setMonth(start.getMonth()-6);
-  let end   = new Date(MOCK_TODAY); end.setMonth(end.getMonth()+12);
+  let start = new Date(TODAY); start.setMonth(start.getMonth()-6);
+  let end   = new Date(TODAY); end.setMonth(end.getMonth()+12);
   while(start.getDay() !== 1) start = addDays(start, 1);   // first Monday
   while(end.getDay() !== 5) end = addDays(end, -1);        // last Friday
 
   const out = [];
+  let wd = workdayDelta(start);
   for(let c = new Date(start); c <= end; c = addDays(c,1)){
     if(!isWorkday(c)) continue;
-    const wd = workdayDelta(c);
     const sprintOffset = Math.floor(wd / 10);
     const wdMod = ((wd % 10) + 10) % 10;
     const dow = c.getDay();
     out.push({
       date: new Date(c),
+      iso: toISODate(c),
       ts: c.getTime(),
       d: DOW[dow],
       n: c.getDate(),
       m: MONTHS[c.getMonth()],
       y: c.getFullYear(),
-      sprint: SPRINT_ANCHOR_NUM + sprintOffset,
+      sprint: SPRINT.anchorNumber + sprintOffset,
       week: wdMod < 5 ? 1 : 2,
-      today: c.getFullYear()===MOCK_TODAY.getFullYear() && c.getMonth()===MOCK_TODAY.getMonth() && c.getDate()===MOCK_TODAY.getDate(),
+      today: c.getTime() === TODAY.getTime(),
       weekStart: dow === 1,
     });
+    wd++;
   }
   return out;
 }
 
-const TIMELINE = buildTimeline();
+let TIMELINE = [];
+let TIMELINE_INDEX = new Map(); // iso -> index
+let TODAY_IDX = -1;
+function rebuildTimeline(){
+  TODAY = localToday();
+  TIMELINE = buildTimeline();
+  TIMELINE_INDEX = new Map(TIMELINE.map((t, i) => [t.iso, i]));
+  TODAY_IDX = TIMELINE.findIndex(t=>t.today);
+  // Weekend "today": point at the following Monday so the Today button still lands sensibly.
+  if(TODAY_IDX < 0){
+    const ts = TODAY.getTime();
+    TODAY_IDX = TIMELINE.findIndex(t => t.ts > ts);
+  }
+}
 
-// look up workday index for a given (month, day, year=2026) — clamps to nearest workday
+/* Current sprint label for the toolbar, e.g. "Sprint 41 | Oct 12 – Oct 23, 2026". */
+function currentSprintLabel(){
+  const i = Math.max(0, TODAY_IDX);
+  const t = TIMELINE[i];
+  if(!t) return '';
+  let s = i, e = i;
+  while(s > 0 && TIMELINE[s-1].sprint === t.sprint) s--;
+  while(e < TIMELINE.length-1 && TIMELINE[e+1].sprint === t.sprint) e++;
+  const a = TIMELINE[s], b = TIMELINE[e];
+  return `Sprint ${t.sprint} | ${capWord(a.m)} ${a.n} – ${capWord(b.m)} ${b.n}, ${b.y}`;
+}
+
 function projectTintRangeFromMs(p, msIdxs){
   const total = TIMELINE.length;
   let startIdx = 0, endIdx = total;
   const sd = p.startDate || { mode:'undefined' };
   const ed = p.endDate || { mode:'undefined' };
   if(sd.mode === 'date' && sd.date){
-    startIdx = idxOf(sd.date[0], sd.date[1]);
+    startIdx = idxOf(sd.date);
   } else if(sd.mode === 'milestone' && msIdxs.length){
     startIdx = Math.min(...msIdxs);
   }
   if(ed.mode === 'date' && ed.date){
-    endIdx = idxOf(ed.date[0], ed.date[1]) + 1;
+    endIdx = idxOf(ed.date) + 1;
   } else if(ed.mode === 'milestone' && msIdxs.length){
     endIdx = Math.max(...msIdxs);
   }
@@ -1444,17 +142,24 @@ function projectTintRangeFromMs(p, msIdxs){
   return { startIdx, endIdx };
 }
 function projectTintRange(p){
-  const msIdxs = (p.milestones || []).map(m=> idxOf(m.date[0], m.date[1]));
+  const msIdxs = (p.milestones || []).map(m=> idxOf(m.date));
   return projectTintRangeFromMs(p, msIdxs);
 }
-function idxOf(month, day, year=2026){
-  const target = new Date(year, MONTH_IDX[month], day).getTime();
+/* Timeline index for a 'YYYY-MM-DD' date — weekends and out-of-range dates clamp to the nearest workday. */
+function idxOf(iso){
+  const exact = TIMELINE_INDEX.get(iso);
+  if(exact !== undefined) return exact;
+  const target = parseISODate(iso).getTime();
   let best = 0, bestDiff = Infinity;
   for(let i=0;i<TIMELINE.length;i++){
     const diff = Math.abs(TIMELINE[i].ts - target);
     if(diff < bestDiff){ bestDiff = diff; best = i; }
   }
   return best;
+}
+function isoFromTimelineIdx(i){
+  const t = TIMELINE[Math.max(0, Math.min(TIMELINE.length-1, i))];
+  return t ? t.iso : todayISO();
 }
 
 const TINTS = {
@@ -1472,181 +177,82 @@ const TINTS = {
   gray:   { tint: "#a8a39a", bg: "rgba(168,163,154,0.15)", bgMember: "rgba(168,163,154,0.07)", wi: "rgba(168,163,154,0.20)", wiBd: "#bdbab2" },
 };
 
+/* ------------------------------------------------------------
+ *  People
+ * ------------------------------------------------------------ */
+const USERS = new Map(); // id -> user
+let ME = null;
+function userName(uid){
+  const u = USERS.get(uid);
+  return u ? u.name : 'Unknown';
+}
+/* Active people, alphabetical — the choices offered in member / owner pickers. */
+function workspaceMembers(){
+  return [...USERS.values()]
+    .filter(u => u.active)
+    .sort((a,b)=> a.name.localeCompare(b.name))
+    .map(u => u.id);
+}
 const AVATAR_COLORS = ["#b07cc6","#4fb5c9","#e29a4f","#6fbf73","#4fbfa8","#d97757","#a08acb","#e0a44b"];
-function avatarColor(name){
+function colorForName(name){
   let h = 0; for(const c of name) h = (h*31 + c.charCodeAt(0)) >>> 0;
   return AVATAR_COLORS[h % AVATAR_COLORS.length];
 }
-function initials(name){
+function initialsForName(name){
   const p = name.split(" ").filter(Boolean);
   return ((p[0]?.[0]||"") + (p[1]?.[0]||"")).toUpperCase();
 }
+/* Avatar helpers take a user id. Initials are escaped because names are user-entered. */
+function avatarColor(uid){ return colorForName(userName(uid)); }
+function initials(uid){ return escape(initialsForName(userName(uid))); }
 
-/* Mocked ArcSite Jira workspace member directory */
-const WORKSPACE_MEMBERS = [
-  "Tim Rice","Junyu Zhang","Xiangtao Zhao","Haowei Wang",
-  "Tony Duan","Zeyi Jiang","Muyun Xiao","Boyuan Shi","Pei",
-];
+/* ------------------------------------------------------------
+ *  Board data (filled from the server by loadState)
+ * ------------------------------------------------------------ */
+let PROJECTS = [];
+let MEMBER_LEAVES = Object.create(null);
+let TEAM_OTHERS = Object.create(null);
+function othersFor(uid){ return (TEAM_OTHERS[uid] || []).slice(); }
+function othersPid(uid){ return `__others__:${uid}`; }
 
-/* Mocked PTO / leave entries — type: 'full' | 'am' | 'pm' */
-const MEMBER_LEAVES = {
-  "Tim Rice":      [{ date:["MAY",15], type:"full" }],
-  "Junyu Zhang":   [{ date:["MAY", 7], type:"pm"   }],
-  "Xiangtao Zhao": [{ date:["MAY", 8], type:"full" }],
-  "Zeyi Jiang":    [{ date:["MAY",12], type:"full" }, { date:["MAY",13], type:"full" }],
-  "Boyuan Shi":    [{ date:["MAY", 6], type:"am"   }],
-};
-
-/* Per-member "Others" — work items not tracked by any project on this board.
-   Independent per person; only used in team view. Items contribute to the
-   per-day workload heatmap but stay visually neutral (gray) to distinguish
-   them from board-tracked projects. */
-const TEAM_OTHERS = {
-  "Tim Rice":      [{ start:["MAY", 6], end:["MAY", 8], label:"1:1s & hiring loop" }],
-  "Junyu Zhang":   [{ start:["MAY",14], end:["MAY",16], label:"Design review rotation" }],
-  "Xiangtao Zhao": [{ start:["MAY",19], end:["MAY",22], label:"Infra on-call" }],
-  "Tony Duan":     [{ start:["MAY", 7], end:["MAY", 9], label:"Recruiting interviews" }],
-  "Zeyi Jiang":    [{ start:["MAY",15], end:["MAY",18], label:"Brand guideline refresh" }],
-  "Muyun Xiao":    [{ start:["MAY", 7], end:["MAY",10], label:"Roadmap planning" }],
-  "Boyuan Shi":    [{ start:["MAY", 7], end:["MAY",12], label:"Internal tools cleanup" }],
-  "Pei":           [{ start:["MAY",13], end:["MAY",15], label:"Customer support escalations" }],
-  "Haowei Wang":   [{ start:["MAY", 5], end:["MAY", 9], label:"Engineering platform support" }],
-};
-function othersFor(name){ return (TEAM_OTHERS[name] || []).slice(); }
-function othersPid(name){ return `__others__:${name}`; }
-
-const PROJECTS = [
-  {
-    title: "Proposal V3", key: "ARC-2837", status: "On Track", tint: "indigo", expanded: false,
-    members: [
-      { name: "Tim Rice", role: "Owner / PM" },
-      { name: "Junyu Zhang", role: "Designer" },
-      { name: "Xiangtao Zhao", role: "Front End" },
-    ],
-    milestones: [
-      { date:["MAY",4], title:"MVP1 (Beta) Release", desc:"Closed beta to 5 design partners", type:"Beta" },
-      { date:["MAY",15], title:"General Access", desc:"Open to all paying customers", type:"Launch" },
-    ],
-    items: [
-      { who:"Tim Rice", start:["MAY",4], end:["MAY",12], label:"Beta partner interviews", notes:"5 calls scheduled, focus on pricing flow" },
-      { who:"Junyu Zhang", start:["APR",29], end:["MAY",4], label:"Editor v3 wireframes", notes:"Iterate on side-panel layout" },
-      { who:"Junyu Zhang", start:["MAY",4], end:["MAY",7], label:"Beta release polish" },
-      { who:"Xiangtao Zhao", start:["APR",28], end:["MAY",4], label:"Canvas refactor", notes:"Switch off legacy DOM renderer" },
-      { who:"Xiangtao Zhao", start:["MAY",7], end:["MAY",14], label:"Autosave + version history", notes:"Hook into ARC-2901 backend" },
-    ],
-  },
-  {
-    title: "Proposal Template Paragraph Block", key: "ARC-3085", status: "At Risk", tint: "rose", expanded: false,
-    members: [
-      { name: "Tim Rice", role: "Owner / PM" },
-      { name: "Tony Duan", role: "Designer" },
-      { name: "Zeyi Jiang", role: "Designer" },
-      { name: "Xiangtao Zhao", role: "Front End" },
-    ],
-    milestones: [
-      { date:["APR",30], title:"Spec freeze", desc:"Block taxonomy + props locked", type:"Review" },
-      { date:["MAY",8], title:"Internal demo", desc:"Sign-off from leadership", type:"Release" },
-    ],
-    items: [
-      { who:"Tim Rice", start:["APR",30], end:["MAY",4], label:"Stakeholder review", notes:"Walk through scope w/ Sales" },
-      { who:"Tony Duan", start:["APR",24], end:["APR",30], label:"Block UX explorations", notes:"3 directions for layout grid" },
-      { who:"Tony Duan", start:["MAY",4], end:["MAY",7], label:"Iterate on feedback" },
-      { who:"Zeyi Jiang", start:["MAY",1], end:["MAY",14], label:"Tokens + spacing system", notes:"Align with design-system v1.4" },
-      { who:"Xiangtao Zhao", start:["APR",30], end:["MAY",7], label:"Block API scaffolding" },
-      { who:"Xiangtao Zhao", start:["MAY",8], end:["MAY",14], label:"Editor toolbar wiring" },
-    ],
-  },
-  {
-    title: "Fence AI BIM", key: "ARC-2675", status: "Off Track", tint: "yellow", expanded: false,
-    members: [
-      { name: "Muyun Xiao", role: "Owner / PM" },
-      { name: "Junyu Zhang", role: "Designer" },
-    ],
-    milestones: [
-      { date:["MAY",4], title:"Kick Off", desc:"Project charter + scope review", type:"Kickoff" },
-      { date:["MAY",11], title:"Architecture review", desc:"Pipeline + data flow walkthrough", type:"Review" },
-    ],
-    items: [
-      { who:"Muyun Xiao", start:["APR",23], end:["APR",30], label:"Vendor evaluation", notes:"Compare 3 ML providers" },
-      { who:"Muyun Xiao", start:["APR",30], end:["MAY",4], label:"Kickoff prep + scoping doc" },
-      { who:"Junyu Zhang", start:["MAY",5], end:["MAY",11], label:"Concept sketches" },
-      { who:"Junyu Zhang", start:["MAY",11], end:["MAY",13], label:"Ideation session", notes:"Whiteboard w/ engineering" },
-      { who:"Junyu Zhang", start:["MAY",13], end:["MAY",25], label:"Detail design" },
-    ],
-  },
-  {
-    title: "Parametric Room", key: "ARC-2940", status: "On Track", tint: "teal", expanded: false,
-    members: [
-      { name: "Boyuan Shi", role: "Owner / PM" },
-    ],
-    milestones: [
-      { date:["APR",30], title:"Research wrap-up", desc:"Pick parametric approach", type:"Review" },
-      { date:["MAY",18], title:"Engineering kickoff", desc:"Hand-off to dev", type:"Kickoff" },
-    ],
-    items: [
-      { who:"Boyuan Shi", start:["APR",27], end:["APR",30], label:"Comparative research", notes:"Survey existing room editors" },
-      { who:"Boyuan Shi", start:["MAY",18], end:["MAY",22], label:"Kickoff prep + tech spec" },
-    ],
-  },
-  {
-    title: "Commercial Fence AI", key: "ARC-1380", status: "On Track", tint: "blue", expanded: false,
-    members: [
-      { name: "Pei", role: "Owner / PM" },
-    ],
-    milestones: [
-      { date:["MAY",11], title:"Kick Off", desc:"Scope, partners, success metrics", type:"Kickoff" },
-    ],
-    items: [
-      { who:"Pei", start:["MAY",5], end:["MAY",8], label:"Kickoff agenda + invites" },
-      { who:"Pei", start:["MAY",11], end:["MAY",12], label:"Kickoff session" },
-    ],
-    showTooltip: true,
-  },
-];
-
-/* ============================================================
- *  ID assignment + state helpers
- * ============================================================ */
-let __nid = 0;
 let projectView = 'active'; // 'active' | 'archived'
 let viewMode = 'project';   // 'project' | 'team'
-const teamExpanded = Object.create(null); // teamMemberName -> bool
-function nid(){ return ++__nid; }
-function assignIds(){
-  PROJECTS.forEach(p=>{
-    if(!p.id) p.id = nid();
-    if(!p.description) p.description = "";
-    p.members.forEach(m=>{ if(!m.id) m.id = nid(); });
-    p.milestones.forEach(ms=>{ if(!ms.id) ms.id = nid(); if(!ms.type) ms.type = "Milestone"; });
-    p.items.forEach(it=>{ if(!it.id) it.id = nid(); });
-  });
-  Object.entries(TEAM_OTHERS).forEach(([who, items])=>{
-    items.forEach(it=>{ if(!it.id) it.id = nid(); if(!it.who) it.who = who; });
-  });
+const teamExpanded = Object.create(null); // userId -> bool
+
+/* Project expand/collapse is a personal view preference, remembered per browser. */
+const EXPANDED_KEY = 'mc.expandedProjects';
+function loadExpandedIds(){
+  try { return new Set(JSON.parse(localStorage.getItem(EXPANDED_KEY) || '[]')); } catch(_) { return new Set(); }
 }
-assignIds();
+function saveExpandedIds(){
+  try { localStorage.setItem(EXPANDED_KEY, JSON.stringify(PROJECTS.filter(p=>p.expanded).map(p=>p.id))); } catch(_) {}
+}
+
+/* Ids for new things are made in the browser so an item can be shown and
+   edited immediately, before the server has confirmed it. */
+function nid(){ return crypto.randomUUID(); }
 
 /* Synthetic project lookup for the per-member "Others" row.
-   The sentinel pid is `__others__:<member>`; we hand the existing drag/resize
+   The sentinel pid is `__others__:<userId>`; we hand the existing drag/resize
    /popover pipeline a project-shaped object whose `items` array is bound live
    to TEAM_OTHERS[member] (via getter/setter so push/=filter both work). */
-function othersSyntheticProject(memberName){
+function othersSyntheticProject(uid){
   const synth = {
-    id: othersPid(memberName),
+    id: othersPid(uid),
     title: 'Others',
     key: '',
     status: '',
     tint: 'gray',
     description: '',
     expanded: true,
-    members: [{ id: -1, name: memberName, role: 'Other' }],
+    members: [{ id: '__others__', userId: uid, role: 'Other' }],
     milestones: [],
     __isOthers: true,
-    __member: memberName,
+    __member: uid,
   };
   Object.defineProperty(synth, 'items', {
-    get(){ return TEAM_OTHERS[memberName] || (TEAM_OTHERS[memberName] = []); },
-    set(v){ TEAM_OTHERS[memberName] = v; },
+    get(){ return TEAM_OTHERS[uid] || (TEAM_OTHERS[uid] = []); },
+    set(v){ TEAM_OTHERS[uid] = v; },
     configurable: true,
     enumerable: true,
   });
@@ -1666,29 +272,6 @@ function findItem(pid, wid){
   return p.items.find(it=> String(it.id) === String(wid)) || null;
 }
 
-/* date <-> tuple helpers */
-function dateToTuple(d){ return [MONTHS[d.getMonth()], d.getDate()]; }
-function tupleToDate(t, year=2026){ return new Date(year, MONTH_IDX[t[0]], t[1]); }
-function dateToInputValue(d){
-  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${day}`;
-}
-function inputValueToTuple(s){
-  if(!s) return null;
-  const [y,m,d] = s.split('-').map(Number);
-  return [MONTHS[m-1], d];
-}
-function tupleToInputValue(t, year=2026){ return dateToInputValue(tupleToDate(t, year)); }
-function tupleToReadable(t, year=2026){
-  const d = tupleToDate(t, year);
-  const cap = s => s.charAt(0) + s.slice(1).toLowerCase();
-  return `${cap(DOW[d.getDay()])}, ${cap(MONTHS[d.getMonth()])} ${d.getDate()}, ${year}`;
-}
-function tupleFromTimelineIdx(i){
-  const t = TIMELINE[Math.max(0, Math.min(TIMELINE.length-1, i))];
-  return [MONTHS[t.date.getMonth()], t.date.getDate()];
-}
-
 /* ============================================================
  *  Component renderers
  * ============================================================ */
@@ -1697,12 +280,6 @@ let zoomIndex = 6; // default 72
 let dayW = ZOOM_LEVELS[zoomIndex];
 const sidebarW = 320;
 
-/* date-based timeline utilities */
-function getDateIndex(month, day){ return idxOf(month, day); }
-function getXFromDate(month, day){ return getDateIndex(month, day) * dayW; }
-function getWidthFromDateRange(sM, sD, eM, eD){
-  return (getDateIndex(eM, eD) - getDateIndex(sM, sD)) * dayW;
-}
 const STATUS_CLASS = { "On Track":"ontrack", "At Risk":"atrisk", "Off Track":"offtrack", "Archived":"archived" };
 
 function escape(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
@@ -1730,7 +307,7 @@ function TopToolbar(){ return `
     </div>
     <div class="spacer"></div>
     <div class="right-cluster">
-      <div class="sprint-range">Sprint 29 | Apr 27 – May 20, 2026</div>
+      <div class="sprint-range" id="sprintRange">${escape(currentSprintLabel())}</div>
       <button class="btn" id="todayBtn">
         <svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5"/><path d="M7 4v3l2 1.5"/></svg>
         Today
@@ -1744,6 +321,7 @@ function TopToolbar(){ return `
         <button class="ico-btn" id="zoomOutBtn" title="Zoom out"><svg viewBox="0 0 14 14"><circle cx="6" cy="6" r="4"/><path d="M9 9l3 3"/><path d="M4 6h4"/></svg></button>
       </div>
       <button class="ico-btn" id="moreBtn" title="More"><svg viewBox="0 0 14 14"><circle cx="3" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="7" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="11" cy="7" r="1" fill="currentColor" stroke="none"/></svg></button>
+      ${ME ? `<button class="user-btn" id="userBtn" title="${escape(ME.name)} · ${escape(ME.email)}"><span class="avatar" style="background:${avatarColor(ME.id)}">${initials(ME.id)}</span></button>` : ''}
     </div>
   </div>`;
 }
@@ -1817,8 +395,11 @@ function weekOverlay(){
   return `<div class="week-overlay">${lines}</div>`;
 }
 
+/* A milestone with no title shows its type ("Kick Off", "Release", …). */
+function msDisplayTitle(ms){ return ms.title || (ms.type === 'Kickoff' ? 'Kick Off' : (ms.type || 'Milestone')); }
+
 function MilestoneMarker(ms, tintHex, withSidebarOffset, labelSpan, pid){
-  const i = idxOf(ms.date[0], ms.date[1]);
+  const i = idxOf(ms.date);
   const left = withSidebarOffset
     ? `calc(var(--sidebar-w) + ${i} * var(--day-w) - 1px)`
     : `calc(${i} * var(--day-w) - 1px)`;
@@ -1831,7 +412,7 @@ function MilestoneMarker(ms, tintHex, withSidebarOffset, labelSpan, pid){
       <div class="ms-hit"></div>
       <div class="ms-flag">${escape(ms.type || "Milestone")}</div>
       <div class="ms-tooltip">Drag to move · Click to edit</div>
-      <div class="ms-title">${escape(ms.title || (ms.__pending ? (ms.type === 'Kickoff' ? 'Kick Off' : (ms.type || 'Milestone')) : ''))}</div>
+      <div class="ms-title">${escape(msDisplayTitle(ms))}</div>
       <div class="ms-desc">${escape(ms.desc)}</div>
     </div>`;
 }
@@ -1843,13 +424,13 @@ function MilestoneMarker(ms, tintHex, withSidebarOffset, labelSpan, pid){
    moves over different OFF cells. */
 function wiHatchHtml(who, s, e){
   const leaves = (MEMBER_LEAVES[who] || []).filter(l => {
-    const idx = idxOf(l.date[0], l.date[1]);
+    const idx = idxOf(l.date);
     return idx >= s && idx < e;
   });
   if(leaves.length === 0) return '';
   const id = `wih${++__laneHatchSeq}`;
   const rects = leaves.map(l => {
-    const idx = idxOf(l.date[0], l.date[1]);
+    const idx = idxOf(l.date);
     const xExpr = l.type === 'pm'
       ? `calc((${idx} - ${s}) * var(--day-w) - 4px + var(--day-w) * 0.5)`
       : `calc((${idx} - ${s}) * var(--day-w) - 4px)`;
@@ -1871,8 +452,8 @@ function wiHatchHtml(who, s, e){
 }
 
 function WorkItemBar(item, palette, pid){
-  const s = idxOf(item.start[0], item.start[1]);
-  const e = idxOf(item.end[0], item.end[1]);
+  const s = idxOf(item.start);
+  const e = idxOf(item.end);
   const span = Math.max(e - s, 1);
   const label = item.label || "Work item";
   const hatchHtml = wiHatchHtml(item.who, s, e);
@@ -1900,7 +481,7 @@ function MemberLaneHatchSvg(memberName, kind){
     ? 'lane-hatch lane-hatch--gray-base'
     : (kind === 'dark' ? 'lane-hatch lane-hatch--dark' : 'lane-hatch');
   const rects = leaves.map(l => {
-    const idx = idxOf(l.date[0], l.date[1]);
+    const idx = idxOf(l.date);
     if(idx < 0 || idx >= TIMELINE.length) return '';
     const xExpr = l.type === 'pm'
       ? `calc(${idx} * var(--day-w) + var(--day-w) * 0.5)`
@@ -1969,22 +550,23 @@ function alignHatchOverlays(){
 function ProjectSidebar(p){
   const sc = STATUS_CLASS[p.status] || "ontrack";
   const palette = TINTS[p.tint];
-  const owner = p.members[0];
+  const owner = p.members[0] || { userId: null };
+  const ownerName = userName(owner.userId);
   return `
     <div class="project-side" data-pid="${p.id}" style="--tint:${palette.tint};--tint-bg:${palette.bg}">
       <div class="project-head">
         <div class="project-title" data-action="open-panel" data-pid="${p.id}" title="${escape(p.title)}">${escape(p.title)}</div>
-        <span class="status ${sc}" data-action="open-panel" data-pid="${p.id}">${p.status}</span>
+        <span class="status ${sc}" data-action="open-panel" data-pid="${p.id}">${escape(p.status)}</span>
       </div>
       <div class="key-row" data-action="open-panel" data-pid="${p.id}">${escape(p.key)}</div>
       <div class="owner-row" ${p.expanded ? 'style="display:none"' : ''}>
         <div class="owner-chip">
-          <div class="avatar" style="background:${avatarColor(owner.name)}">${initials(owner.name)}</div>
-          <span class="owner-name">${escape(owner.name)}</span>
+          <div class="avatar" style="background:${avatarColor(owner.userId)}">${initials(owner.userId)}</div>
+          <span class="owner-name">${escape(ownerName)}</span>
           ${p.members.length > 1 ? `<span class="owner-extra">+ ${p.members.length - 1} project member${p.members.length - 1 === 1 ? '' : 's'}</span>` : ''}
           <span class="owner-hint">is the owner pm, click to view planned schedule.</span>
         </div>
-        <div class="tooltip"><strong>Owner/PM: ${escape(owner.name)}</strong>Expand to view all members and planned schedule</div>
+        <div class="tooltip"><strong>Owner/PM: ${escape(ownerName)}</strong>Expand to view all members and planned schedule</div>
       </div>
       <div class="expand-controls" ${p.expanded ? '' : 'style="display:none"'}>
         <a class="show-toggle" href="#">Show less</a>
@@ -2002,19 +584,19 @@ function MemberRow(m, palette, p){
   // hatch (z=0) but below the work item bar's label (which lives in
   // .wi z=2 with sticky positioning).
   const msLines = (p.milestones || []).map(ms => {
-    const i = idxOf(ms.date[0], ms.date[1]);
+    const i = idxOf(ms.date);
     return `<div class="ms-line" style="left:calc(${i} * var(--day-w) - 1px);background:${palette.tint}"></div>`;
   }).join('');
   return `
-    <div class="member-row" data-pid="${p.id}" data-mid="${m.id}">
+    <div class="member-row" data-pid="${p.id}" data-mid="${m.id}" data-uid="${escape(m.userId)}">
       <div class="member-side" style="--tint:${palette.tint};--tint-bg:${palette.bgMember}">
-        <div class="avatar" style="background:${avatarColor(m.name)}">${initials(m.name)}</div>
+        <div class="avatar" style="background:${avatarColor(m.userId)}">${initials(m.userId)}</div>
         <div class="member-meta">
-          <div class="member-name">${escape(m.name)}</div>
+          <div class="member-name">${escape(userName(m.userId))}</div>
           <div class="member-role">${escape(m.role)}</div>
         </div>
       </div>
-      <div class="member-lane" style="--tint:${palette.tint};--tint-bg:${palette.bgMember};--tint-left:calc(${range.startIdx} * var(--day-w));--tint-width:calc(${range.endIdx - range.startIdx} * var(--day-w))" data-pid="${p.id}" data-member="${escape(m.name)}">${MemberLaneLeaveOverlays(m.name, true)}${msLines}</div>
+      <div class="member-lane" style="--tint:${palette.tint};--tint-bg:${palette.bgMember};--tint-left:calc(${range.startIdx} * var(--day-w));--tint-width:calc(${range.endIdx - range.startIdx} * var(--day-w))" data-pid="${p.id}" data-member="${escape(m.userId)}">${MemberLaneLeaveOverlays(m.userId, true)}${msLines}</div>
     </div>`;
 }
 
@@ -2033,10 +615,10 @@ function ProjectRow(p, isLast){
           <div class="project-summary" data-pid="${p.id}"></div>
         </div>
       </div>
-      <div class="member-block" data-pid="${p.id}" data-project="${escape(p.title)}" ${p.expanded ? '' : 'style="display:none"'}>${memberRows}</div>
+      <div class="member-block" data-pid="${p.id}" ${p.expanded ? '' : 'style="display:none"'}>${memberRows}</div>
       ${(()=>{
         const sorted = p.milestones
-          .map(ms => ({ ms, idx: idxOf(ms.date[0], ms.date[1]) }))
+          .map(ms => ({ ms, idx: idxOf(ms.date) }))
           .sort((a,b) => a.idx - b.idx);
         return sorted.map((entry, k) => {
           const next = sorted[k+1];
@@ -2072,38 +654,35 @@ function ProjectBoard(){
    No new dataset is introduced; mutating PROJECTS automatically updates this view. */
 function deriveTeamData(){
   const memberMap = new Map();
-  const order = WORKSPACE_MEMBERS.slice(); // canonical sort order (mocked workspace directory)
-  function ensure(name, role){
-    let e = memberMap.get(name);
-    if(!e){ e = { name, role: role || '', projects: new Map() }; memberMap.set(name, e); }
+  function ensure(uid, role){
+    let e = memberMap.get(uid);
+    if(!e){ e = { uid, role: role || '', projects: new Map() }; memberMap.set(uid, e); }
     else if(!e.role && role){ e.role = role; }
     return e;
   }
+  function projectEntry(e, p){
+    let pe = e.projects.get(p.id);
+    if(!pe){ pe = { project: p, items: [] }; e.projects.set(p.id, pe); }
+    return pe;
+  }
   visibleProjects().forEach(p=>{
-    p.members.forEach(m => ensure(m.name, m.role));
+    // Every project member gets a row for the project, even before they have
+    // any work items in it — so someone just added shows up right away.
+    p.members.forEach(m => projectEntry(ensure(m.userId, m.role), p));
     p.items.forEach(it=>{
-      const role = (p.members.find(m=> m.name === it.who) || {}).role;
-      const e = ensure(it.who, role);
-      let pe = e.projects.get(p.id);
-      if(!pe){ pe = { project: p, items: [] }; e.projects.set(p.id, pe); }
-      pe.items.push(it);
+      const role = (p.members.find(m=> m.userId === it.who) || {}).role;
+      projectEntry(ensure(it.who, role), p).items.push(it);
     });
   });
   // Surface members who only have "Others" items (no board-tracked projects).
-  Object.entries(TEAM_OTHERS).forEach(([name, items])=>{
-    if(items && items.length > 0) ensure(name, '');
+  Object.entries(TEAM_OTHERS).forEach(([uid, items])=>{
+    if(items && items.length > 0) ensure(uid, '');
   });
-  // Drop members with zero items (project items OR Others items).
+  // Drop people with no projects and no Others items.
   const teams = Array.from(memberMap.values()).filter(e =>
-    e.projects.size > 0 || (TEAM_OTHERS[e.name] || []).length > 0
+    e.projects.size > 0 || (TEAM_OTHERS[e.uid] || []).length > 0
   );
-  teams.sort((a,b)=>{
-    const ai = order.indexOf(a.name), bi = order.indexOf(b.name);
-    if(ai !== -1 && bi !== -1) return ai - bi;
-    if(ai !== -1) return -1;
-    if(bi !== -1) return 1;
-    return a.name.localeCompare(b.name);
-  });
+  teams.sort((a,b)=> userName(a.uid).localeCompare(userName(b.uid)));
   return teams;
 }
 function workloadLevel(itemCount){
@@ -2116,10 +695,10 @@ function workloadLevel(itemCount){
 function TeamMemberSidebar(tm, itemCount, projCount, expanded){
   const wl = workloadLevel(itemCount);
   return `
-    <div class="project-side team-side" data-team="${escape(tm.name)}" style="--tint:transparent;--tint-bg:transparent">
+    <div class="project-side team-side" data-team="${escape(tm.uid)}" style="--tint:transparent;--tint-bg:transparent">
       <div class="project-head">
-        <div class="avatar" style="background:${avatarColor(tm.name)}">${initials(tm.name)}</div>
-        <div class="project-title" title="${escape(tm.name)}">${escape(tm.name)}</div>
+        <div class="avatar" style="background:${avatarColor(tm.uid)}">${initials(tm.uid)}</div>
+        <div class="project-title" title="${escape(userName(tm.uid))}">${escape(userName(tm.uid))}</div>
         <span class="workload-tag ${wl}" title="Workload: ${wl}" style="display:none">${wl}</span>
       </div>
       <button class="key-row team-toggle" type="button" title="Show / hide projects">
@@ -2161,20 +740,20 @@ function TeamOthersRow(teamName){
 
 function TeamMemberRow(tm){
   const projEntries = Array.from(tm.projects.values());
-  const othersCount = (TEAM_OTHERS[tm.name] || []).length;
+  const othersCount = (TEAM_OTHERS[tm.uid] || []).length;
   const itemCount = projEntries.reduce((n, pe) => n + pe.items.length, 0) + othersCount;
   const projCount = projEntries.length;
-  const expanded = !!teamExpanded[tm.name];
-  const childRows = projEntries.map(pe => TeamProjectRow(tm.name, pe)).join('') + TeamOthersRow(tm.name);
+  const expanded = !!teamExpanded[tm.uid];
+  const childRows = projEntries.map(pe => TeamProjectRow(tm.uid, pe)).join('') + TeamOthersRow(tm.uid);
   return `
-    <div class="project-group team-group" data-team="${escape(tm.name)}">
+    <div class="project-group team-group" data-team="${escape(tm.uid)}">
       <div class="project ${expanded ? 'has-members' : ''}">
         ${TeamMemberSidebar(tm, itemCount, projCount, expanded)}
         <div class="project-lane" style="--tint-bg:transparent">
-          <div class="project-summary" data-team="${escape(tm.name)}"></div>
+          <div class="project-summary" data-team="${escape(tm.uid)}"></div>
         </div>
       </div>
-      <div class="member-block team-block" data-team="${escape(tm.name)}" ${expanded ? '' : 'style="display:none"'}>${childRows}</div>
+      <div class="member-block team-block" data-team="${escape(tm.uid)}" ${expanded ? '' : 'style="display:none"'}>${childRows}</div>
     </div>`;
 }
 
@@ -2197,7 +776,7 @@ function TeamBoard(){
 function FooterStatusBar(){
   return `
     <div class="footer">
-      <div>Updated on 2026/4/29 19:10:48</div>
+      <div class="footer-status" id="footerStatus">${footerStatusHtml()}</div>
       <div class="right">Drag the timeline to pan · Click magnifier to zoom · Click <span class="kbd">Today</span> to recenter</div>
     </div>`;
 }
@@ -2213,7 +792,6 @@ function App(){
   `;
 }
 
-document.getElementById("app").innerHTML = App();
 
 /* During fast interactions (work item drag/resize), batch redundant heatmap
    refreshes to at most one per animation frame so we don't spend the frame
@@ -2257,8 +835,8 @@ function refreshMemberLaneHatches(memberName){
         item = findItem(pid, wi.dataset.wid);
       }
       if(!item) return;
-      const s = idxOf(item.start[0], item.start[1]);
-      const e = idxOf(item.end[0], item.end[1]);
+      const s = idxOf(item.start);
+      const e = idxOf(item.end);
       const wiHatch = wiHatchHtml(memberName, s, e);
       if(!wiHatch) return;
       const handle = wi.querySelector(':scope > .wi-handle.l');
@@ -2283,8 +861,8 @@ function renderTeamHeatmap(filterTeamName){
     visibleProjects().forEach(p=>{
       (p.items || []).forEach(it=>{
         if(it.who !== teamName) return;
-        const s = idxOf(it.start[0], it.start[1]);
-        const e = idxOf(it.end[0], it.end[1]);
+        const s = idxOf(it.start);
+        const e = idxOf(it.end);
         for(let i = s; i < e; i++){
           if(i >= 0 && i < N) perDay[i].push({ pid:p.id, tint:p.tint, label:it.label });
         }
@@ -2292,8 +870,8 @@ function renderTeamHeatmap(filterTeamName){
     });
     // Per-member "Others" items — neutral gray, also count toward workload.
     (TEAM_OTHERS[teamName] || []).forEach(it=>{
-      const s = idxOf(it.start[0], it.start[1]);
-      const e = idxOf(it.end[0], it.end[1]);
+      const s = idxOf(it.start);
+      const e = idxOf(it.end);
       for(let i = s; i < e; i++){
         if(i >= 0 && i < N) perDay[i].push({ pid: othersPid(teamName), tint:'gray', label:it.label });
       }
@@ -2302,7 +880,7 @@ function renderTeamHeatmap(filterTeamName){
     // the category label and the hover tooltip can pull notes/day-type.
     const leaveByDay = {};
     (MEMBER_LEAVES[teamName] || []).forEach(l=>{
-      const idx = idxOf(l.date[0], l.date[1]);
+      const idx = idxOf(l.date);
       if(idx >= 0 && idx < N) leaveByDay[idx] = l;
     });
 
@@ -2480,16 +1058,14 @@ function placeWorkItems(opts){
   });
   if(!skipAlign) alignHatchOverlays();
 }
-placeWorkItems();
-
 /* Insert TODAY vertical marker on top of header + lanes. */
-const TODAY_IDX = TIMELINE.findIndex(t=>t.today);
 let __todayInterval = null;
 let __startPanAt = null;
 function placeTodayMarker(){
   if(__todayInterval){ clearInterval(__todayInterval); __todayInterval = null; }
   document.querySelectorAll('.now-floor').forEach(el=> el.remove());
-  if(TODAY_IDX<0) return;
+  // No marker on weekends (the timeline only has workdays).
+  if(TODAY_IDX<0 || !TIMELINE[TODAY_IDX].today) return;
   const board = document.querySelector(".board");
   const header = document.querySelector(".header");
   const boardScroll = document.getElementById("boardScroll");
@@ -2558,15 +1134,15 @@ function placeTodayMarker(){
   window.addEventListener('scroll', syncFloor, { passive:true });
 
   __todayInterval = setInterval(()=>{
+    // Past midnight: move "today" and re-render.
+    if(todayISO() !== toISODate(TODAY)){ onCalendarChanged(); return; }
     marker.style.left = markerLeftCalc();
     label.textContent = nowLabel().replace(/&lt;/g,'<').replace(/&gt;/g,'>');
     syncFloor();
   }, 60000);
 }
-placeTodayMarker();
-
-/* Tooltip for Project 5 (Pei) */
-function cssEscape(s){ return s.replace(/"/g,'\\"'); }
+/* Escape a value for use inside a double-quoted CSS attribute selector. */
+function cssEscape(s){ return String(s).replace(/["\\]/g,'\\$&'); }
 
 /* Project card expand / collapse — also handles team-member groups in team view. */
 function expandGroup(group){
@@ -2580,7 +1156,7 @@ function expandGroup(group){
   if(block) block.style.display = '';
   proj.classList.add('has-members');
   const pid = group.dataset.pid;
-  if(pid){ const p = findProject(pid); if(p) p.expanded = true; }
+  if(pid){ const p = findProject(pid); if(p){ p.expanded = true; saveExpandedIds(); } }
   const team = group.dataset.team;
   if(team){ teamExpanded[team] = true; }
   // In team view, work-item bars are not inserted into collapsed team-blocks
@@ -2623,7 +1199,7 @@ function collapseGroup(group){
   if(block) block.style.display = 'none';
   proj.classList.remove('has-members');
   const pid = group.dataset.pid;
-  if(pid){ const p = findProject(pid); if(p) p.expanded = false; }
+  if(pid){ const p = findProject(pid); if(p){ p.expanded = false; saveExpandedIds(); } }
   const team = group.dataset.team;
   if(team){ teamExpanded[team] = false; }
   // alignHatchOverlays + refreshExpandAllBtn are batched by callers — see
@@ -2656,8 +1232,6 @@ function setupExpandCollapse(){
     });
   });
 }
-setupExpandCollapse();
-
 /* Today button: scroll so current week starts near left edge of timeline */
 function scrollToToday(smooth){
   const el = document.getElementById('boardScroll');
@@ -2666,14 +1240,6 @@ function scrollToToday(smooth){
   while(weekStart > 0 && TIMELINE[weekStart].d !== 'MON') weekStart--;
   el.scrollTo({ left: weekStart * dayW, behavior: smooth ? 'smooth' : 'auto' });
 }
-setupBoardScrollbar();
-setupWiLabelClamp();
-setupPan();
-setupTodayBtn();
-setupZoomBtns();
-setupExpandAllBtn();
-setupMoreBtn();
-scrollToToday(false);
 
 /* Project reordering: drag a project card (left sidebar) to another slot.
    Live preview via FLIP — other projects shift in real-time with animation. */
@@ -2754,9 +1320,12 @@ scrollToToday(false);
     if(!dragging){ source = null; return; }
     document.body.classList.remove('is-proj-dragging');
     source.classList.remove('is-proj-source');
-    // Sync PROJECTS array to current DOM order
-    const order = rows().map(g => g.querySelector('.project-title').getAttribute('title'));
-    PROJECTS.sort((a,b)=> order.indexOf(a.title) - order.indexOf(b.title));
+    // Sync PROJECTS array to current DOM order (projects not on screen, e.g.
+    // archived ones, keep their relative order after the visible ones).
+    const order = rows().map(g => g.dataset.pid);
+    const rank = p => { const i = order.indexOf(String(p.id)); return i === -1 ? order.length : i; };
+    PROJECTS.sort((a,b)=> rank(a) - rank(b));
+    Save.reorderProjects();
     setTimeout(clearTransforms, 260);
     source = null;
     dragging = false;
@@ -2864,11 +1433,11 @@ scrollToToday(false);
     source.classList.remove('is-member-source');
     // Sync PROJECTS.members to current DOM order
     const block = source.parentNode;
-    const projTitle = block.dataset.project;
-    const proj = PROJECTS.find(p => p.title === projTitle);
+    const proj = findProject(block.dataset.pid);
     if(proj){
-      const order = rowsIn(block).map(r => r.querySelector('.member-name').textContent);
-      proj.members.sort((a,b) => order.indexOf(a.name) - order.indexOf(b.name));
+      const order = rowsIn(block).map(r => r.dataset.uid);
+      proj.members.sort((a,b) => order.indexOf(a.userId) - order.indexOf(b.userId));
+      Save.putMembers(proj);
     }
     setTimeout(()=>{
       rowsIn(block).forEach(g => { g.style.transition=''; g.style.transform=''; });
@@ -2988,15 +1557,13 @@ function setupOwnerTip(){
     row.addEventListener('mouseenter', ()=>{
       if(document.body.classList.contains('is-proj-dragging')) return;
       const r = row.getBoundingClientRect();
-      const html = `<strong>Owner/PM: ${owner}</strong>Expand to view all members and planned schedule`;
+      const html = `<strong>Owner/PM: ${escape(owner)}</strong>Expand to view all members and planned schedule`;
       // Anchor below the owner-row, aligned to its left edge
       showTipHTML(html, r.left, r.bottom + 4, {multiline:true});
     });
     row.addEventListener('mouseleave', hideTip);
   });
 }
-setupOwnerTip();
-
 /* Timeline cell hover: highlight the hovered cell and show "+" on empty cells */
 function setupCellHover(){
   const board = document.querySelector('.board');
@@ -3032,7 +1599,7 @@ function setupCellHover(){
         const cellLeft = parseFloat(overlay.style.left) || 0;
         const startIdx = Math.round(cellLeft / dayW);
         const isWeek = document.querySelector('.board').classList.contains('is-week-mode');
-        const tuple = tupleFromTimelineIdx(startIdx);
+        const tuple = isoFromTimelineIdx(startIdx);
         const r = btn.getBoundingClientRect();
         if(kind === 'milestone'){
           const pid = lane.dataset.pid;
@@ -3043,7 +1610,7 @@ function setupCellHover(){
           // In week mode default to the full Mon–Fri span; otherwise a 1-day item.
           const endIdx = isWeek ? Math.min(TIMELINE.length-1, startIdx + 5) : startIdx;
           const startTuple = tuple;
-          const endTuple = tupleFromTimelineIdx(endIdx);
+          const endTuple = isoFromTimelineIdx(endIdx);
           openWorkItemPopover({ pid, item:null, defaultMember:memberName, defaultStart:startTuple, defaultEnd:endTuple, anchor:r });
         }
       });
@@ -3213,8 +1780,6 @@ function setupCellHover(){
     setupLane(l, 'milestone');
   });
 }
-setupCellHover();
-
 /* Per-summary "+" affordance: a single overlay element follows the cursor across
    the team-summary row and shows a "+" when the cursor is over an EMPTY cell.
    This replaces the previous per-cell button (one button per empty cell added
@@ -3333,10 +1898,10 @@ function setupTeamSummaryAddHover(){
     const memberName = summary.dataset.team;
     const idx = parseInt(cell.dataset.idx, 10);
     if(isNaN(idx) || !memberName) return;
-    const tuple = tupleFromTimelineIdx(idx);
-    const dayIdx = idxOf(tuple[0], tuple[1]);
+    const tuple = isoFromTimelineIdx(idx);
+    const dayIdx = idxOf(tuple);
     const leave = (MEMBER_LEAVES[memberName] || []).find(l =>
-      idxOf(l.date[0], l.date[1]) === dayIdx);
+      idxOf(l.date) === dayIdx);
     if(!leave) return;
     const dayLabel = (TIME_OFF_DAY_TYPES.find(d => d.value === leave.type) || {}).label || 'Full day';
     const catLabel = (TIME_OFF_CATEGORIES.find(c => c.value === (leave.category || 'vacation')) || {}).label || 'Vacation';
@@ -3400,7 +1965,7 @@ function setupTeamSummaryAddHover(){
       const memberName = summary.dataset.team;
       const idx = parseInt(overlay.dataset.idx, 10);
       if(isNaN(idx) || !memberName) return;
-      const tuple = tupleFromTimelineIdx(idx);
+      const tuple = isoFromTimelineIdx(idx);
       const r = btn.getBoundingClientRect();
       openTimeOffPopover({ memberName, defaultDate: tuple, anchor: r });
       return;
@@ -3416,10 +1981,10 @@ function setupTeamSummaryAddHover(){
       const memberName = summary.dataset.team;
       const idx = parseInt(cell.dataset.idx, 10);
       if(isNaN(idx) || !memberName) return;
-      const tuple = tupleFromTimelineIdx(idx);
-      const dayIdx = idxOf(tuple[0], tuple[1]);
+      const tuple = isoFromTimelineIdx(idx);
+      const dayIdx = idxOf(tuple);
       const leave = (MEMBER_LEAVES[memberName] || []).find(l =>
-        idxOf(l.date[0], l.date[1]) === dayIdx);
+        idxOf(l.date) === dayIdx);
       if(!leave) return;
       const r = stripe.getBoundingClientRect();
       openTimeOffPopover({ memberName, leave, anchor: r });
@@ -3464,6 +2029,7 @@ function mountBoard(opts){
     setupZoomBtns();
     setupExpandAllBtn();
     setupMoreBtn();
+    setupUserBtn();
   });
 }
 let __renderAppViewMode = viewMode;
@@ -3652,117 +2218,57 @@ function zoomBy(dir){
   // (only --day-w changes), so we need to re-measure them against the new width.
   requestAnimationFrame(fitPtoTags);
 }
-function serializePROJECTS(){
-  const lines = ['const PROJECTS = ['];
-  PROJECTS.forEach(p=>{
-    lines.push('  {');
-    lines.push(`    title: ${JSON.stringify(p.title)}, key: ${JSON.stringify(p.key)}, status: ${JSON.stringify(p.status)}, tint: ${JSON.stringify(p.tint)}, expanded: false,`);
-    if(p.description) lines.push(`    description: ${JSON.stringify(p.description)},`);
-    lines.push(`    members: [`);
-    p.members.forEach(m=>{
-      lines.push(`      { name: ${JSON.stringify(m.name)}, role: ${JSON.stringify(m.role)} },`);
-    });
-    lines.push(`    ],`);
-    lines.push(`    milestones: [`);
-    p.milestones.forEach(ms=>{
-      const parts = [];
-      parts.push(`date:[${JSON.stringify(ms.date[0])},${ms.date[1]}]`);
-      parts.push(`title:${JSON.stringify(ms.title)}`);
-      if(ms.desc) parts.push(`desc:${JSON.stringify(ms.desc)}`);
-      parts.push(`type:${JSON.stringify(ms.type || 'Milestone')}`);
-      lines.push(`      { ${parts.join(', ')} },`);
-    });
-    lines.push(`    ],`);
-    lines.push(`    items: [`);
-    p.items.forEach(it=>{
-      const parts = [];
-      parts.push(`who:${JSON.stringify(it.who)}`);
-      parts.push(`start:[${JSON.stringify(it.start[0])},${it.start[1]}]`);
-      parts.push(`end:[${JSON.stringify(it.end[0])},${it.end[1]}]`);
-      if(it.label) parts.push(`label:${JSON.stringify(it.label)}`);
-      if(it.notes) parts.push(`notes:${JSON.stringify(it.notes)}`);
-      if(it.jira)  parts.push(`jira:${JSON.stringify(it.jira)}`);
-      lines.push(`      { ${parts.join(', ')} },`);
-    });
-    lines.push(`    ],`);
-    if(p.showTooltip) lines.push(`    showTooltip: true,`);
-    lines.push('  },');
-  });
-  lines.push('];');
-  return lines.join('\n');
-}
-
-function openSaveDemoModal(){
-  closeAllOverlays();
-  const code = serializePROJECTS();
-  const scrim = buildScrim();
-  const modal = document.createElement('div');
-  modal.className = 'modal';
-  modal.style.width = '560px';
-  modal.innerHTML = `
-    <div class="modal-head">
-      <div class="modal-title">Save canvas to demo data</div>
-      <button class="modal-close" aria-label="Close">
-        <svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 2l7 7M9 2l-7 7"/></svg>
-      </button>
-    </div>
-    <div class="modal-body">
-      <div style="font-size:11px;color:var(--ink-2);margin-bottom:8px">
-        Replace the existing <code>const PROJECTS = […];</code> block in <code>index.html</code> with the snippet below. The code is already copied to your clipboard.
-      </div>
-      <textarea readonly style="width:100%;height:280px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;line-height:1.45;border:1px solid var(--line-strong);border-radius:4px;padding:8px;resize:vertical;background:#fafaf6"></textarea>
-      <div data-bind="status" style="margin-top:6px;font-size:11px;color:var(--status-on);min-height:14px"></div>
-    </div>
-    <div class="modal-foot">
-      <button class="btn-secondary" data-act="close">Close</button>
-      <button class="btn-primary" data-act="copy">Copy</button>
-    </div>
-  `;
-  const ta = modal.querySelector('textarea');
-  ta.value = code;
-  const status = modal.querySelector('[data-bind="status"]');
-  function copy(){
-    navigator.clipboard?.writeText(code).then(
-      ()=>{ status.textContent = '✓ Copied to clipboard'; },
-      ()=>{ ta.select(); document.execCommand && document.execCommand('copy'); status.textContent = '✓ Copied (fallback)'; }
-    );
-  }
-  // Attempt initial copy
-  copy();
-  modal.querySelector('[data-act="copy"]').addEventListener('click', copy);
-  modal.querySelector('[data-act="close"]').addEventListener('click', closeAllOverlays);
-  modal.querySelector('.modal-close').addEventListener('click', closeAllOverlays);
-  scrim.appendChild(modal);
-  pushOverlay(scrim);
-}
-
 function setupMoreBtn(){
   const btn = document.getElementById('moreBtn');
   if(!btn || btn.__bound) return;
   btn.addEventListener('click', e=>{
     e.preventDefault();
     e.stopPropagation();
-    document.querySelectorAll('.dropdown.__moredrop').forEach(d=> d.remove());
-    const r = btn.getBoundingClientRect();
-    const dd = document.createElement('div');
-    dd.className = 'dropdown __moredrop';
-    dd.style.minWidth = '200px';
-    dd.innerHTML = `<div class="opt" data-act="save-demo">Save canvas to demo data</div>`;
-    dd.style.left = (r.right - 200) + 'px';
-    dd.style.top  = (r.bottom + 4) + 'px';
-    document.body.appendChild(dd);
-    dd.querySelector('[data-act="save-demo"]').addEventListener('click', ()=>{
-      dd.remove();
-      openSaveDemoModal();
-    });
-    setTimeout(()=>{
-      const off = (ev)=>{
-        if(!dd.contains(ev.target)){ dd.remove(); document.removeEventListener('mousedown', off, true); }
-      };
-      document.addEventListener('mousedown', off, true);
-    }, 0);
+    const items = [
+      { act: 'activity', label: 'Recent changes' },
+      ...(ME && ME.isAdmin ? [{ act: 'admin', label: 'People & sprint settings' }] : []),
+    ];
+    openMenu(btn, items, act=>{
+      if(act === 'activity') openActivityModal();
+      if(act === 'admin') openAdminModal();
+    }, { align: 'right', width: 200 });
   });
   btn.__bound = true;
+}
+function setupUserBtn(){
+  const btn = document.getElementById('userBtn');
+  if(!btn || btn.__bound) return;
+  btn.addEventListener('click', e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    openMenu(btn, [
+      { act: 'who', label: `${ME.name} · ${ME.email}`, disabled: true },
+      { act: 'logout', label: 'Sign out' },
+    ], async act=>{
+      if(act !== 'logout') return;
+      await Save.flushAll();
+      try { await apiFetch('POST', '/auth/logout'); } catch(_){}
+      location.href = '/login';
+    }, { align: 'right', width: 240 });
+  });
+  btn.__bound = true;
+}
+/* Small dropdown menu anchored under a toolbar button. */
+function openMenu(anchorEl, items, onPick, { align = 'left', width = 180 } = {}){
+  document.querySelectorAll('.dropdown.__moredrop').forEach(d=> d.remove());
+  const r = anchorEl.getBoundingClientRect();
+  const dd = document.createElement('div');
+  dd.className = 'dropdown __moredrop';
+  dd.style.minWidth = width + 'px';
+  dd.innerHTML = items.map(it => `<div class="opt${it.disabled ? ' is-info' : ''}" data-act="${escape(it.act)}"><span class="opt-name">${escape(it.label)}</span></div>`).join('');
+  dd.style.left = (align === 'right' ? r.right - width : r.left) + 'px';
+  dd.style.top  = (r.bottom + 4) + 'px';
+  document.body.appendChild(dd);
+  dd.querySelectorAll('.opt:not(.is-info)').forEach(o => o.addEventListener('click', ()=>{
+    dd.remove();
+    onPick(o.dataset.act);
+  }));
+  setTimeout(()=> bindOutside(dd), 0);
 }
 
 function isAllGroupsExpanded(){
@@ -3787,7 +2293,7 @@ function setupExpandAllBtn(){
     btn.addEventListener('click', ()=>{
       const target = !isAllGroupsExpanded();
       document.querySelectorAll('.project-group').forEach(g => target ? expandGroup(g) : collapseGroup(g));
-      if(viewMode === 'project') PROJECTS.forEach(p=> p.expanded = target);
+      if(viewMode === 'project'){ PROJECTS.forEach(p=> p.expanded = target); saveExpandedIds(); }
       // Batch the layout-flushing alignment + button refresh once at the end —
       // expandGroup/collapseGroup intentionally skip them so we don't pay for
       // 9 layout flushes when toggling all 9 teams at once.
@@ -3862,13 +2368,14 @@ function openAddProjectModal(){
   // can mutate `draft.milestones` directly without us pre-pushing into PROJECTS.
   const draft = {
     id: nid(),
+    __draft: true, // milestone edits stay local until "Add project" is pressed
     title: "",
     key: "",
-    ownerName: "",
-    memberNames: [],
+    ownerId: "",
+    memberIds: [],
     status: "On Track",
-    tint: tintKeys[PROJECTS.length % tintKeys.length],
-    milestones: [{ id: nid(), date: dateToTuple(MOCK_TODAY), title: "Kick Off", desc: "", type: "Kickoff" }],
+    tint: tintKeys.filter(k => k !== 'gray')[PROJECTS.length % (tintKeys.length - 1)],
+    milestones: [{ id: nid(), date: todayISO(), title: "Kick Off", desc: "", type: "Kickoff" }],
     startDate: { mode: 'milestone' },
     endDate: { mode: 'undefined' },
     mode: 'manual',
@@ -4000,11 +2507,11 @@ function openAddProjectModal(){
   // Owner picker (project-edit style)
   const ownerWrap = formPane.querySelector('[data-bind="owner"]');
   function renderOwner(){
-    if(draft.ownerName){
+    if(draft.ownerId){
       ownerWrap.innerHTML = `
         <button type="button" class="owner-pick-btn">
-          <span class="avatar" style="background:${avatarColor(draft.ownerName)};width:18px;height:18px;font-size:9px">${initials(draft.ownerName)}</span>
-          ${escape(draft.ownerName)}
+          <span class="avatar" style="background:${avatarColor(draft.ownerId)};width:18px;height:18px;font-size:9px">${initials(draft.ownerId)}</span>
+          ${escape(userName(draft.ownerId))}
         </button>`;
     } else {
       ownerWrap.innerHTML = `
@@ -4014,10 +2521,10 @@ function openAddProjectModal(){
     }
     ownerWrap.firstElementChild.addEventListener('click', e=>{
       const r = e.currentTarget.getBoundingClientRect();
-      openMemberDropdown(r, WORKSPACE_MEMBERS, name=>{
-        draft.ownerName = name;
-        // Don't keep owner name in members chips
-        draft.memberNames = draft.memberNames.filter(n=> n !== name);
+      openMemberDropdown(r, workspaceMembers(), uid=>{
+        draft.ownerId = uid;
+        // Don't keep the owner in the members chips
+        draft.memberIds = draft.memberIds.filter(n=> n !== uid);
         renderOwner(); renderMembers(); validate();
       });
     });
@@ -4093,12 +2600,12 @@ function openAddProjectModal(){
   function renderMembers(){
     membersWrap.innerHTML = `<div class="member-list"></div>`;
     const wrap = membersWrap.querySelector('.member-list');
-    draft.memberNames.forEach(name=>{
+    draft.memberIds.forEach(uid=>{
       const c = document.createElement('span');
       c.className = 'chip';
-      c.innerHTML = `<span class="avatar" style="background:${avatarColor(name)}">${initials(name)}</span>${escape(name)}<span class="x" title="Remove">×</span>`;
+      c.innerHTML = `<span class="avatar" style="background:${avatarColor(uid)}">${initials(uid)}</span>${escape(userName(uid))}<span class="x" title="Remove">×</span>`;
       c.querySelector('.x').addEventListener('click', ()=>{
-        draft.memberNames = draft.memberNames.filter(n=> n !== name);
+        draft.memberIds = draft.memberIds.filter(n=> n !== uid);
         renderMembers();
       });
       wrap.appendChild(c);
@@ -4109,10 +2616,10 @@ function openAddProjectModal(){
     add.innerHTML = '<span style="font-size:13px;line-height:1">+</span><span class="label">Add member</span>';
     add.addEventListener('click', ()=>{
       const r = add.getBoundingClientRect();
-      const exclude = new Set([draft.ownerName, ...draft.memberNames].filter(Boolean));
-      const avail = WORKSPACE_MEMBERS.filter(n=> !exclude.has(n));
-      openMemberDropdown(r, avail, name=>{
-        if(!draft.memberNames.includes(name)) draft.memberNames.push(name);
+      const exclude = new Set([draft.ownerId, ...draft.memberIds].filter(Boolean));
+      const avail = workspaceMembers().filter(n=> !exclude.has(n));
+      openMemberDropdown(r, avail, uid=>{
+        if(!draft.memberIds.includes(uid)) draft.memberIds.push(uid);
         renderMembers();
       });
     });
@@ -4126,6 +2633,7 @@ function openAddProjectModal(){
   function renderColor(){
     colorWrap.innerHTML = '';
     Object.entries(TINTS).forEach(([key, t])=>{
+      if(key === 'gray') return; // reserved for the "Others" rows
       const sw = document.createElement('span');
       sw.className = 'sw' + (draft.tint === key ? ' active' : '');
       sw.style.background = t.tint;
@@ -4147,7 +2655,7 @@ function openAddProjectModal(){
     const v = side==='start' ? draft.startDate : draft.endDate;
     if(v.mode === 'undefined') return 'Undefined';
     if(v.mode === 'milestone') return side==='start' ? 'First Milestone' : 'Last Milestone';
-    if(v.mode === 'date' && v.date) return `${v.date[0]} ${v.date[1]}`;
+    if(v.mode === 'date' && v.date) return `${fmtShortDate(v.date)}`;
     return 'Undefined';
   }
   function renderDurPick(side){
@@ -4174,10 +2682,10 @@ function openAddProjectModal(){
         if(mode === 'date'){
           const target = isStart ? draft.startDate : draft.endDate;
           target.mode = 'date';
-          if(!target.date) target.date = dateToTuple(MOCK_TODAY);
+          if(!target.date) target.date = todayISO();
           renderDurPick(side);
           const inp = formPane.querySelector(`[data-bind="${side}-date"]`);
-          inp.value = tupleToInputValue(target.date);
+          inp.value = target.date;
           try { inp.showPicker?.(); } catch(_){}
         } else {
           if(isStart) draft.startDate = { mode };
@@ -4196,11 +2704,11 @@ function openAddProjectModal(){
     openDurDropdown('end', e.currentTarget.getBoundingClientRect());
   });
   formPane.querySelector('[data-bind="start-date"]').addEventListener('change', e=>{
-    const t = inputValueToTuple(e.target.value);
+    const t = (e.target.value || null);
     if(t){ draft.startDate = { mode:'date', date:t }; renderDurPick('start'); }
   });
   formPane.querySelector('[data-bind="end-date"]').addEventListener('change', e=>{
-    const t = inputValueToTuple(e.target.value);
+    const t = (e.target.value || null);
     if(t){ draft.endDate = { mode:'date', date:t }; renderDurPick('end'); }
   });
   renderDurPick('start');
@@ -4217,16 +2725,16 @@ function openAddProjectModal(){
     if(countEl) countEl.textContent = draft.milestones.length;
     const palette = TINTS[draft.tint];
     [...draft.milestones]
-      .sort((a,b)=> idxOf(a.date[0],a.date[1]) - idxOf(b.date[0],b.date[1]))
+      .sort((a,b)=> idxOf(a.date) - idxOf(b.date))
       .forEach(ms=>{
         const row = document.createElement('div');
         row.className = 'ms-list-row' + (ms.id === selectedMsId ? ' is-selected' : '');
         row.style.setProperty('--ms', palette.tint);
-        const titleText = ms.title || (ms.__pending ? (ms.type === 'Kickoff' ? 'Kick Off' : (ms.type || 'Milestone')) : '');
+        const titleText = msDisplayTitle(ms);
         row.innerHTML = `
           <span class="ms-dot"></span>
           <span class="ms-name" title="${escape(titleText)}">${escape(titleText)}</span>
-          <span class="ms-meta">${ms.date[0]} ${ms.date[1]}</span>
+          <span class="ms-meta">${fmtShortDate(ms.date)}</span>
           <button class="x-btn" title="Delete">
             <svg width="9" height="9" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 2l7 7M9 2l-7 7"/></svg>
           </button>
@@ -4258,11 +2766,11 @@ function openAddProjectModal(){
             // the project still has a meaningful start/end.
             if(draft.milestones.length === 0){
               if(draft.startDate.mode === 'milestone'){
-                draft.startDate = { mode: 'date', date: dateToTuple(MOCK_TODAY) };
+                draft.startDate = { mode: 'date', date: todayISO() };
                 renderDurPick('start');
               }
               if(draft.endDate.mode === 'milestone'){
-                draft.endDate = { mode: 'date', date: dateToTuple(MOCK_TODAY) };
+                draft.endDate = { mode: 'date', date: todayISO() };
                 renderDurPick('end');
               }
             }
@@ -4278,8 +2786,8 @@ function openAddProjectModal(){
     addMs.addEventListener('click', ()=>{
       let defaultDate;
       if(draft.milestones.length){
-        const lastIdx = Math.max(...draft.milestones.map(m=> idxOf(m.date[0], m.date[1])));
-        defaultDate = tupleFromTimelineIdx(lastIdx + 1);
+        const lastIdx = Math.max(...draft.milestones.map(m=> idxOf(m.date)));
+        defaultDate = isoFromTimelineIdx(lastIdx + 1);
       }
       openMilestonePopover({ proj: draft, defaultDate, anchor: addMs.getBoundingClientRect() });
     });
@@ -4338,70 +2846,55 @@ function openAddProjectModal(){
   function isFetchMode(){
     return draft.mode === 'jira' && !jiraImported;
   }
-  function fetchJiraProject(){
+  async function fetchJiraProject(){
     const key = jiraKeyFromLink();
     if(!key) return;
     // Snapshot the URL value before swapping the input out.
     const inp = jiraLinkSlot.querySelector('input');
     if(inp) jiraUrl = inp.value;
     jiraStatus.innerHTML = `<div class="jira-loading"><span class="spinner"></span>Fetching from Jira…</div>`;
-    setTimeout(()=>{
-      // Mocked imported data — pretend we got these fields from Jira.
-      const mockEpicTitles = [
-        'Pricing Engine Refresh',
-        'Onboarding Flow v2',
-        'Mobile Field Capture',
-        'Realtime Collaboration',
-        'Estimator Reporting Suite',
-        'Drawing Canvas Performance',
-      ];
-      const num = parseInt((key.split('-')[1] || '0'), 10);
-      draft.title = mockEpicTitles[num % mockEpicTitles.length];
-      draft.key = key;
-
-      // Mock Jira fields: PM, Designer, Collaborator, optional Start date.
-      const ws = WORKSPACE_MEMBERS;
-      const pm = ws[num % ws.length];
-      const designer = ws[(num + 1) % ws.length];
-      const collaborator = ws[(num + 2) % ws.length];
-      // Roughly half of Jira issues have a start date set in this mock.
-      const hasStartDate = (num % 2) === 0;
-      let startTuple = null;
-      if(hasStartDate){
-        const d = new Date(MOCK_TODAY);
-        d.setDate(d.getDate() - 5);
-        startTuple = dateToTuple(d);
+    let issue;
+    try {
+      issue = await apiFetch('GET', `/api/jira/issue/${encodeURIComponent(key)}`);
+    } catch(err){
+      jiraStatus.innerHTML = `<div class="jira-loading" style="color:var(--status-off)">${escape(err.message)}</div>`;
+      return;
+    }
+    if(!modal.isConnected) return;
+    draft.title = issue.title || draft.title;
+    draft.key = issue.url || issue.key;
+    draft.status = "On Track";
+    // Jira's assignee becomes the Owner / PM when they're on the board.
+    if(issue.ownerId){
+      draft.ownerId = issue.ownerId;
+      draft.memberIds = draft.memberIds.filter(n=> n !== issue.ownerId);
+    }
+    // Apply Jira's start date if present; otherwise keep the auto Kick Off
+    // milestone (created when the modal opened) and anchor start to it.
+    if(issue.startDate){
+      draft.startDate = { mode: 'date', date: issue.startDate };
+    } else {
+      const hasKickoff = draft.milestones.some(m=> m.type === 'Kickoff');
+      if(!hasKickoff){
+        draft.milestones.unshift({
+          id: nid(), date: todayISO(),
+          title: 'Kick Off', desc: '', type: 'Kickoff'
+        });
       }
+      draft.startDate = { mode: 'milestone' };
+    }
+    if(issue.dueDate) draft.endDate = { mode: 'date', date: issue.dueDate };
 
-      draft.ownerName = pm;
-      draft.memberNames = [designer, collaborator].filter(n=> n && n !== pm);
-      draft.status = "On Track";
-
-      // Apply Jira start date if present; otherwise keep the auto Kick Off
-      // milestone (created when the modal opened) and anchor start to it.
-      if(startTuple){
-        draft.startDate = { mode: 'date', date: startTuple };
-      } else {
-        const hasKickoff = draft.milestones.some(m=> m.type === 'Kickoff');
-        if(!hasKickoff){
-          draft.milestones.unshift({
-            id: nid(), date: dateToTuple(MOCK_TODAY),
-            title: 'Kick Off', desc: '', type: 'Kickoff'
-          });
-        }
-        draft.startDate = { mode: 'milestone' };
-      }
-
-      jiraStatus.innerHTML = `<div class="jira-loading" style="color:var(--status-on)">✓ Imported from ${escape(key)} — review &amp; edit below</div>`;
-      jiraImported = true;
-      renderJiraLinkDisplay();
-      // Reflect into the form pane and reveal it
-      titleEl.value = draft.title;
-      renderOwner(); renderStatusTag(); renderJiraKey(false); renderMembers(); renderMilestonesSection();
-      renderDurPick('start'); renderDurPick('end');
-      formPane.style.display = '';
-      validate();
-    }, 700);
+    const ownerNote = issue.ownerId ? '' : (issue.assigneeName ? ` (assignee ${issue.assigneeName} isn't on the board yet — choose an owner)` : ' — choose an owner');
+    jiraStatus.innerHTML = `<div class="jira-loading" style="color:var(--status-on)">✓ Imported from ${escape(issue.key)}${escape(ownerNote)} — review &amp; edit below</div>`;
+    jiraImported = true;
+    renderJiraLinkDisplay();
+    // Reflect into the form pane and reveal it
+    titleEl.value = draft.title;
+    renderOwner(); renderStatusTag(); renderJiraKey(false); renderMembers(); renderMilestonesSection();
+    renderDurPick('start'); renderDurPick('end');
+    formPane.style.display = '';
+    validate();
   }
 
   function validate(){
@@ -4411,7 +2904,7 @@ function openAddProjectModal(){
       saveBtn.disabled = !jiraKeyFromLink();
     } else {
       saveBtn.textContent = 'Add project';
-      saveBtn.disabled = !(draft.title.trim() && draft.ownerName);
+      saveBtn.disabled = !(draft.title.trim() && draft.ownerId);
     }
   }
   validate();
@@ -4420,8 +2913,8 @@ function openAddProjectModal(){
   modal.querySelector('[data-act="save"]').addEventListener('click', ()=>{
     if(isFetchMode()){ fetchJiraProject(); return; }
     const memberObjs = [
-      { id: nid(), name: draft.ownerName, role: "Owner / PM" },
-      ...draft.memberNames.map(n => ({ id: nid(), name: n, role: "Member" })),
+      { id: nid(), userId: draft.ownerId, role: "Owner / PM" },
+      ...draft.memberIds.map(uid => ({ id: nid(), userId: uid, role: "Member" })),
     ];
     // Commit any pending-default titles in the milestone drafts.
     const milestones = draft.milestones.map(ms=>{
@@ -4443,14 +2936,17 @@ function openAddProjectModal(){
       startDate: draft.startDate,
       endDate: draft.endDate,
       items: [],
+      version: 0,
     };
     PROJECTS.push(newProj);
+    Save.createProject(newProj);
     closeAllOverlays();
     renderApp();
   });
 }
 
 /* ----------------- Member dropdown (used by panel + modal) ----------------- */
+/* Person picker. `names` is a list of user ids; onPick receives the chosen id. */
 function openMemberDropdown(anchorRect, names, onPick, opts){
   // Close other dropdowns
   document.querySelectorAll('.dropdown.__pickdrop').forEach(d=> d.remove());
@@ -4469,7 +2965,7 @@ function openMemberDropdown(anchorRect, names, onPick, opts){
   dd.innerHTML = names.map(n=>`
     <div class="opt${n===current?' is-current':''}" data-name="${escape(n)}">
       <span class="avatar" style="background:${avatarColor(n)};width:18px;height:18px;font-size:9px">${initials(n)}</span>
-      <span class="opt-name">${escape(n)}</span>
+      <span class="opt-name">${escape(userName(n))}</span>
       ${n===current?'<span class="opt-current">Assigned</span>':''}
     </div>`).join("");
   positionDropdown(dd, anchorRect);
@@ -4570,7 +3066,7 @@ function openProjectPanel(pid){
       const v = side==='start' ? proj.startDate : proj.endDate;
       if(v.mode === 'undefined') return 'Undefined';
       if(v.mode === 'milestone') return side==='start' ? 'First Milestone' : 'Last Milestone';
-      if(v.mode === 'date' && v.date) return `${v.date[0]} ${v.date[1]}`;
+      if(v.mode === 'date' && v.date) return `${fmtShortDate(v.date)}`;
       return 'Undefined';
     }
     function renderDurPick(side){
@@ -4597,16 +3093,17 @@ function openProjectPanel(pid){
           const target = isStart ? proj.startDate : proj.endDate;
           if(mode === 'date'){
             target.mode = 'date';
-            if(!target.date) target.date = dateToTuple(MOCK_TODAY);
+            if(!target.date) target.date = todayISO();
             renderDurPick(side);
             const inp = panel.querySelector(`[data-bind="${side}-date"]`);
-            inp.value = tupleToInputValue(target.date);
+            inp.value = target.date;
             try { inp.showPicker?.(); } catch(_){}
           } else {
             if(isStart) proj.startDate = { mode };
             else proj.endDate = { mode };
             renderDurPick(side);
           }
+          Save.patchProject(proj, [isStart ? 'startDate' : 'endDate']);
           renderApp();
           dd.remove();
         });
@@ -4620,12 +3117,12 @@ function openProjectPanel(pid){
       openDurDropdown('end', e.currentTarget.getBoundingClientRect());
     });
     panel.querySelector('[data-bind="start-date"]').addEventListener('change', e=>{
-      const t = inputValueToTuple(e.target.value);
-      if(t){ proj.startDate = { mode:'date', date:t }; renderDurPick('start'); renderApp(); }
+      const t = (e.target.value || null);
+      if(t){ proj.startDate = { mode:'date', date:t }; renderDurPick('start'); Save.patchProject(proj, ['startDate']); renderApp(); }
     });
     panel.querySelector('[data-bind="end-date"]').addEventListener('change', e=>{
-      const t = inputValueToTuple(e.target.value);
-      if(t){ proj.endDate = { mode:'date', date:t }; renderDurPick('end'); renderApp(); }
+      const t = (e.target.value || null);
+      if(t){ proj.endDate = { mode:'date', date:t }; renderDurPick('end'); Save.patchProject(proj, ['endDate']); renderApp(); }
     });
     renderDurPick('start');
     renderDurPick('end');
@@ -4648,6 +3145,7 @@ function openProjectPanel(pid){
         jiraWrap.querySelector('[data-act="clear-jira"]').addEventListener('click', e=>{
           e.preventDefault();
           proj.key = '';
+          Save.patchProject(proj, ['key']);
           renderApp();
           renderJiraKey(true);
         });
@@ -4655,7 +3153,7 @@ function openProjectPanel(pid){
         jiraWrap.innerHTML = `<input data-bind="key" type="text" placeholder="Add URL" />`;
         const inp = jiraWrap.querySelector('input');
         inp.value = '';
-        inp.addEventListener('input', e=>{ proj.key = e.target.value; renderApp(); });
+        inp.addEventListener('input', e=>{ proj.key = e.target.value; Save.patchProject(proj, ['key'], { debounce: true }); renderApp(); });
         inp.addEventListener('blur', ()=>{
           if((proj.key || '').trim()) renderJiraKey(false);
         });
@@ -4689,6 +3187,7 @@ function openProjectPanel(pid){
         o.addEventListener('click', ()=>{
           proj.status = o.dataset.val;
           renderStatusTag();
+          Save.patchProject(proj, ['status']);
           renderApp();
           dd.remove();
         });
@@ -4699,23 +3198,24 @@ function openProjectPanel(pid){
     // owner picker
     const ownerWrap = panel.querySelector('[data-bind="owner"]');
     function renderOwner(){
-      const owner = proj.members[0];
+      const owner = proj.members[0] || { userId: null };
       ownerWrap.innerHTML = `
         <button type="button" class="owner-pick-btn">
-          <span class="avatar" style="background:${avatarColor(owner.name)};width:18px;height:18px;font-size:9px">${initials(owner.name)}</span>
-          ${escape(owner.name)}
+          <span class="avatar" style="background:${avatarColor(owner.userId)};width:18px;height:18px;font-size:9px">${initials(owner.userId)}</span>
+          ${escape(userName(owner.userId))}
         </button>`;
       ownerWrap.firstElementChild.addEventListener('click', e=>{
         const r = e.currentTarget.getBoundingClientRect();
-        openMemberDropdown(r, WORKSPACE_MEMBERS, name=>{
+        openMemberDropdown(r, workspaceMembers(), uid=>{
           const oldOwner = proj.members[0];
-          if(oldOwner && oldOwner.name === name) return;
+          if(oldOwner && oldOwner.userId === uid) return;
           // If new owner is already a member, remove that member entry
-          proj.members = proj.members.filter((m,i)=> i===0 || m.name !== name);
+          proj.members = proj.members.filter((m,i)=> i===0 || m.userId !== uid);
           // Demote old owner to a member and put them right after the owner slot
-          const demoted = oldOwner ? { id: oldOwner.id, name: oldOwner.name, role: "Member" } : null;
-          proj.members[0] = { id: nid(), name, role: "Owner / PM" };
+          const demoted = oldOwner ? { id: oldOwner.id, userId: oldOwner.userId, role: "Member" } : null;
+          proj.members[0] = { id: nid(), userId: uid, role: "Owner / PM" };
           if(demoted) proj.members.splice(1, 0, demoted);
+          Save.putMembers(proj);
           renderOwner(); renderMembers();
           renderApp();
         });
@@ -4731,9 +3231,10 @@ function openProjectPanel(pid){
       proj.members.slice(1).forEach(m=>{
         const c = document.createElement('span');
         c.className = 'chip';
-        c.innerHTML = `<span class="avatar" style="background:${avatarColor(m.name)}">${initials(m.name)}</span>${escape(m.name)}<span class="x" title="Remove">×</span>`;
+        c.innerHTML = `<span class="avatar" style="background:${avatarColor(m.userId)}">${initials(m.userId)}</span>${escape(userName(m.userId))}<span class="x" title="Remove">×</span>`;
         c.querySelector('.x').addEventListener('click', ()=>{
           proj.members = proj.members.filter(x=> x.id !== m.id);
+          Save.putMembers(proj);
           renderMembers();
           renderApp();
         });
@@ -4745,10 +3246,11 @@ function openProjectPanel(pid){
       add.innerHTML = '<span style="font-size:13px;line-height:1">+</span><span class="label">Add member</span>';
       add.addEventListener('click', ()=>{
         const r = add.getBoundingClientRect();
-        const exclude = new Set(proj.members.map(m=> m.name));
-        const avail = WORKSPACE_MEMBERS.filter(n=> !exclude.has(n));
-        openMemberDropdown(r, avail, name=>{
-          proj.members.push({ id: nid(), name, role: "Member" });
+        const exclude = new Set(proj.members.map(m=> m.userId));
+        const avail = workspaceMembers().filter(n=> !exclude.has(n));
+        openMemberDropdown(r, avail, uid=>{
+          proj.members.push({ id: nid(), userId: uid, role: "Member" });
+          Save.putMembers(proj);
           renderMembers();
           renderApp();
         });
@@ -4761,12 +3263,14 @@ function openProjectPanel(pid){
     const colorWrap = panel.querySelector('[data-bind="color"]');
     colorWrap.innerHTML = "";
     Object.entries(TINTS).forEach(([key, t])=>{
+      if(key === 'gray') return; // reserved for the "Others" rows
       const sw = document.createElement('span');
       sw.className = 'sw' + (proj.tint === key ? ' active' : '');
       sw.style.background = t.tint;
       sw.title = key;
       sw.addEventListener('click', ()=>{
         proj.tint = key;
+        Save.patchProject(proj, ['tint']);
         colorWrap.querySelectorAll('.sw').forEach(s=> s.classList.remove('active'));
         sw.classList.add('active');
         const band = panel.querySelector('.modal-color-band');
@@ -4788,15 +3292,15 @@ function openProjectPanel(pid){
     if(countEl) countEl.textContent = proj.milestones.length;
     const palette = TINTS[proj.tint];
     [...proj.milestones]
-      .sort((a,b)=> idxOf(a.date[0],a.date[1]) - idxOf(b.date[0],b.date[1]))
+      .sort((a,b)=> idxOf(a.date) - idxOf(b.date))
       .forEach(ms=>{
         const row = document.createElement('div');
         row.className = 'ms-list-row' + (ms.id === selectedMsId ? ' is-selected' : '');
         row.style.setProperty('--ms', palette.tint);
         row.innerHTML = `
           <span class="ms-dot"></span>
-          <span class="ms-name" title="${escape(ms.title)}">${escape(ms.title)}</span>
-          <span class="ms-meta">${ms.date[0]} ${ms.date[1]}</span>
+          <span class="ms-name" title="${escape(msDisplayTitle(ms))}">${escape(msDisplayTitle(ms))}</span>
+          <span class="ms-meta">${fmtShortDate(ms.date)}</span>
           <button class="x-btn" title="Delete">
             <svg width="9" height="9" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 2l7 7M9 2l-7 7"/></svg>
           </button>
@@ -4823,6 +3327,7 @@ function openProjectPanel(pid){
           });
           row.querySelector('[data-act="confirm"]').addEventListener('click', ()=>{
             proj.milestones = proj.milestones.filter(x=> x.id !== ms.id);
+            Save.deleteMilestone(ms);
             renderApp();
             renderMilestonesSection();
           });
@@ -4836,8 +3341,8 @@ function openProjectPanel(pid){
     addMs.addEventListener('click', ()=>{
       let defaultDate;
       if(proj.milestones.length){
-        const lastIdx = Math.max(...proj.milestones.map(m=> idxOf(m.date[0], m.date[1])));
-        defaultDate = tupleFromTimelineIdx(lastIdx + 1);
+        const lastIdx = Math.max(...proj.milestones.map(m=> idxOf(m.date)));
+        defaultDate = isoFromTimelineIdx(lastIdx + 1);
       }
       openMilestonePopover({ pid: proj.id, defaultDate, anchor: addMs.getBoundingClientRect() });
     });
@@ -4849,8 +3354,8 @@ function openProjectPanel(pid){
   panel.querySelector('[data-bind="title"]').addEventListener('keydown', e=>{
     if(e.key === 'Enter'){ e.preventDefault(); e.target.blur(); }
   });
-  panel.querySelector('[data-bind="title"]').addEventListener('input', e=>{ proj.title = e.target.value; renderApp(); });
-  panel.querySelector('[data-bind="desc"]').addEventListener('input', e=>{ proj.description = e.target.value; });
+  panel.querySelector('[data-bind="title"]').addEventListener('input', e=>{ proj.title = e.target.value; Save.patchProject(proj, ['title'], { debounce: true }); renderApp(); });
+  panel.querySelector('[data-bind="desc"]').addEventListener('input', e=>{ proj.description = e.target.value; Save.patchProject(proj, ['description'], { debounce: true }); });
 
   panel.querySelector('[data-act="close"]').addEventListener('click', closeAllOverlays);
   panel.querySelector('[data-act="more"]').addEventListener('click', e=>{
@@ -4878,6 +3383,7 @@ function openProjectPanel(pid){
         dd.remove();
         if(action === 'reactivate'){
           proj.status = 'On Track';
+          Save.patchProject(proj, ['status']);
           closeAllOverlays();
           renderApp();
           return;
@@ -4897,6 +3403,7 @@ function openProjectPanel(pid){
           foot.querySelector('[data-act="confirm-act"]').addEventListener('click', ()=>{
             const idx = PROJECTS.findIndex(p=> p.id === proj.id);
             if(idx>=0) PROJECTS.splice(idx,1);
+            Save.deleteProject(proj);
             closeAllOverlays();
             renderApp();
           });
@@ -4911,6 +3418,7 @@ function openProjectPanel(pid){
           foot.querySelector('[data-act="cancel-act"]').addEventListener('click', ()=>{ closeAllOverlays(); openProjectPanel(proj.id); });
           foot.querySelector('[data-act="confirm-act"]').addEventListener('click', ()=>{
             proj.status = 'Archived';
+            Save.patchProject(proj, ['status']);
             closeAllOverlays();
             renderApp();
           });
@@ -4946,6 +3454,9 @@ function openMilestonePopover({ pid, proj: projArg, ms, defaultDate, anchor }){
   closePopoversOnly();
   const proj = projArg || findProject(pid);
   if(!proj) return;
+  // In the "Add project" dialog the project doesn't exist on the server yet;
+  // its milestones are sent along when the project is created.
+  const persist = !proj.__draft;
   // Add mode: create the milestone up-front and push so all edits are live.
   const isAdd = !ms;
   if(!ms){
@@ -4955,11 +3466,14 @@ function openMilestonePopover({ pid, proj: projArg, ms, defaultDate, anchor }){
       id: nid(),
       title: "",
       desc: "",
-      date: defaultDate || dateToTuple(MOCK_TODAY),
+      date: defaultDate || todayISO(),
       type: isFirst ? "Kickoff" : "Milestone",
+      projectId: proj.id,
+      version: 0,
       __pending: true,
     };
     proj.milestones.push(ms);
+    if(persist) Save.createMilestone(ms);
     renderApp();
     refreshOpenPanel();
   }
@@ -5007,6 +3521,7 @@ function openMilestonePopover({ pid, proj: projArg, ms, defaultDate, anchor }){
     dd.querySelectorAll('.opt').forEach(o=>{
       o.addEventListener('click', ()=>{
         ms.type = o.dataset.val;
+        if(persist) Save.patchMilestone(ms, ['type']);
         syncTypeTag();
         dd.remove();
         renderApp();
@@ -5019,8 +3534,8 @@ function openMilestonePopover({ pid, proj: projArg, ms, defaultDate, anchor }){
   const dateInp = pop.querySelector('[data-bind="date"]');
   const dateBtn = pop.querySelector('[data-bind="date-btn"]');
   function syncDateBtn(){
-    dateInp.value = tupleToInputValue(ms.date);
-    dateBtn.textContent = tupleToInputValue(ms.date).replace(/-/g, '/');
+    dateInp.value = ms.date;
+    dateBtn.textContent = fmtSlashDate(ms.date);
   }
   syncDateBtn();
   dateBtn.addEventListener('click', ()=>{ try{ dateInp.showPicker?.(); }catch(_){} });
@@ -5044,14 +3559,16 @@ function openMilestonePopover({ pid, proj: projArg, ms, defaultDate, anchor }){
   });
   pop.querySelector('[data-bind="title"]').addEventListener('input', e=>{
     ms.title = e.target.value;
+    if(persist) Save.patchMilestone(ms, ['title'], { debounce: true });
     renderApp(); refreshOpenPanel();
   });
   dateInp.addEventListener('change', e=>{
-    const t = inputValueToTuple(e.target.value);
-    if(t){ ms.date = t; syncDateBtn(); renderApp(); refreshOpenPanel(); }
+    const t = (e.target.value || null);
+    if(t){ ms.date = t; if(persist) Save.patchMilestone(ms, ['date']); syncDateBtn(); renderApp(); refreshOpenPanel(); }
   });
   pop.querySelector('[data-bind="desc"]').addEventListener('input', e=>{
     ms.desc = e.target.value;
+    if(persist) Save.patchMilestone(ms, ['desc'], { debounce: true });
     renderApp(); refreshOpenPanel();
   });
 
@@ -5089,6 +3606,7 @@ function openMilestonePopover({ pid, proj: projArg, ms, defaultDate, anchor }){
     confirmEl.querySelector('[data-act="yes"]').addEventListener('click', ev=>{
       ev.stopPropagation();
       proj.milestones = proj.milestones.filter(x=> x.id !== ms.id);
+      if(persist) Save.deleteMilestone(ms);
       closePopover(pop); renderApp(); refreshOpenPanel();
     });
     pop.addEventListener('mousedown', onPopMousedown, true);
@@ -5101,7 +3619,10 @@ function openMilestonePopover({ pid, proj: projArg, ms, defaultDate, anchor }){
       if(!document.body.contains(pop)){
         obs.disconnect();
         if(ms.__pending && proj.milestones.includes(ms)){
-          if(!ms.title) ms.title = defaultMsTitle(ms.type);
+          if(!ms.title){
+            ms.title = defaultMsTitle(ms.type);
+            if(persist) Save.patchMilestone(ms, ['title']);
+          }
           delete ms.__pending;
           renderApp(); refreshOpenPanel();
         } else {
@@ -5126,6 +3647,10 @@ function openMilestonePopover({ pid, proj: projArg, ms, defaultDate, anchor }){
   pop.__scrim = scrim;
   __overlayStack.push(scrim);
 
+  if(persist){
+    pop.dataset.entity = 'milestone';
+    pop.dataset.entityId = ms.id;
+  }
   positionPopover(pop, anchor);
   __overlayStack.push(pop);
   document.body.appendChild(pop);
@@ -5177,15 +3702,17 @@ function openWorkItemPopover({ pid, item, defaultMember, defaultStart, defaultEn
   if(isAdd){
     item = {
       id: nid(),
+      projectId: proj.__isOthers ? null : proj.id,
       label: "",
-      who: defaultMember || (proj.members[0] && proj.members[0].name),
-      start: defaultStart || dateToTuple(MOCK_TODAY),
-      end: defaultEnd || defaultStart || dateToTuple(MOCK_TODAY),
-      status: "",
+      who: defaultMember || (proj.members[0] && proj.members[0].userId),
+      start: defaultStart || todayISO(),
+      end: defaultEnd || defaultStart || todayISO(),
       jira: "",
       notes: "",
+      version: 0,
     };
     proj.items.push(item);
+    Save.createWorkItem(item);
     refreshWorkItemUI(proj, item);
   }
   const pop = document.createElement('div');
@@ -5216,9 +3743,9 @@ function openWorkItemPopover({ pid, item, defaultMember, defaultStart, defaultEn
   pop.querySelector('[data-bind="label"]').value = item.label || "";
   const whoBtn = pop.querySelector('[data-bind="who-btn"]');
   function renderAssignee(){
-    const name = item.who || (proj.members[0] && proj.members[0].name) || "";
-    whoBtn.innerHTML = name
-      ? `<span class="avatar" style="background:${avatarColor(name)}">${initials(name)}</span><span class="name">${escape(name)}</span>`
+    const uid = item.who || (proj.members[0] && proj.members[0].userId) || "";
+    whoBtn.innerHTML = uid
+      ? `<span class="avatar" style="background:${avatarColor(uid)}">${initials(uid)}</span><span class="name">${escape(userName(uid))}</span>`
       : `<span style="color:var(--ink-3)">Unassigned</span>`;
   }
   renderAssignee();
@@ -5226,16 +3753,17 @@ function openWorkItemPopover({ pid, item, defaultMember, defaultStart, defaultEn
     e.preventDefault();
     hideTip();
     const r = whoBtn.getBoundingClientRect();
-    const names = proj.members.map(m=> m.name);
-    openMemberDropdown(r, names, name=>{
+    const names = proj.members.map(m=> m.userId);
+    openMemberDropdown(r, names, uid=>{
       const oldWho = item.who;
-      item.who = name;
+      item.who = uid;
+      Save.patchWorkItem(item, ['who']);
       renderAssignee();
       refreshWorkItemUI(proj, item, oldWho);
     }, { current: item.who });
   });
   whoBtn.addEventListener('mouseenter', ()=>{
-    const name = item.who || (proj.members[0] && proj.members[0].name) || "Unassigned";
+    const name = item.who ? userName(item.who) : (proj.members[0] ? userName(proj.members[0].userId) : "Unassigned");
     const pr = pop.getBoundingClientRect();
     const tip = ensureTip();
     showTip(`${name}, click to reassign`, pr.left, pr.top - 8);
@@ -5250,10 +3778,10 @@ function openWorkItemPopover({ pid, item, defaultMember, defaultStart, defaultEn
   const endInp   = pop.querySelector('[data-bind="end"]');
   const startBtn = pop.querySelector('[data-bind="start-btn"]');
   const endBtn   = pop.querySelector('[data-bind="end-btn"]');
-  function fmtDate(t){ return tupleToInputValue(t).replace(/-/g, '/'); }
+  const fmtDate = fmtSlashDate;
   function syncDateBtns(){
-    startInp.value = tupleToInputValue(item.start);
-    endInp.value   = tupleToInputValue(item.end);
+    startInp.value = item.start;
+    endInp.value   = item.end;
     startBtn.textContent = fmtDate(item.start);
     endBtn.textContent   = fmtDate(item.end);
   }
@@ -5278,13 +3806,14 @@ function openWorkItemPopover({ pid, item, defaultMember, defaultStart, defaultEn
       jiraWrap.querySelector('[data-act="clear-jira"]').addEventListener('click', e=>{
         e.preventDefault();
         item.jira = '';
+        Save.patchWorkItem(item, ['jira']);
         renderJira(true);
       });
     } else {
       jiraWrap.innerHTML = `<input data-bind="jira" type="text" placeholder="Add URL" />`;
       const inp = jiraWrap.querySelector('input');
       inp.value = '';
-      inp.addEventListener('input', e=> item.jira = e.target.value);
+      inp.addEventListener('input', e=>{ item.jira = e.target.value; Save.patchWorkItem(item, ['jira'], { debounce: true }); });
       inp.addEventListener('blur', ()=>{
         if(item.jira && item.jira.trim()) renderJira(false);
       });
@@ -5294,23 +3823,25 @@ function openWorkItemPopover({ pid, item, defaultMember, defaultStart, defaultEn
   renderJira(false);
 
   const onSt = e=>{
-    const t = inputValueToTuple(e.target.value);
+    const t = (e.target.value || null);
     if(t){
       item.start = t;
-      const sIdx = idxOf(item.start[0], item.start[1]);
-      const eIdx = idxOf(item.end[0], item.end[1]);
-      if(eIdx < sIdx) item.end = item.start.slice();
+      const sIdx = idxOf(item.start);
+      const eIdx = idxOf(item.end);
+      if(eIdx < sIdx || item.end < item.start) item.end = item.start;
+      Save.patchWorkItem(item, ['start', 'end']);
       syncDateBtns();
       refreshWorkItemUI(proj, item);
     }
   };
   const onEn = e=>{
-    const t = inputValueToTuple(e.target.value);
+    const t = (e.target.value || null);
     if(t){
-      const sIdx = idxOf(item.start[0], item.start[1]);
-      const eIdx = idxOf(t[0], t[1]);
-      if(eIdx < sIdx) return;
+      const sIdx = idxOf(item.start);
+      const eIdx = idxOf(t);
+      if(eIdx < sIdx || t < item.start) return;
       item.end = t;
+      Save.patchWorkItem(item, ['end']);
       syncDateBtns();
       refreshWorkItemUI(proj, item);
     }
@@ -5336,6 +3867,7 @@ function openWorkItemPopover({ pid, item, defaultMember, defaultStart, defaultEn
   });
   pop.querySelector('[data-bind="label"]').addEventListener('input', e=>{
     item.label = e.target.value;
+    Save.patchWorkItem(item, ['label'], { debounce: true });
     refreshWorkItemUI(proj, item);
   });
   startInp.addEventListener('change', onSt);
@@ -5343,7 +3875,7 @@ function openWorkItemPopover({ pid, item, defaultMember, defaultStart, defaultEn
   // Visible buttons trigger their hidden picker.
   startBtn.addEventListener('click', ()=>{ try{ startInp.showPicker?.(); }catch(_){} });
   endBtn.addEventListener('click', ()=>{ try{ endInp.showPicker?.(); }catch(_){} });
-  pop.querySelector('[data-bind="notes"]').addEventListener('input', e=> item.notes = e.target.value);
+  pop.querySelector('[data-bind="notes"]').addEventListener('input', e=>{ item.notes = e.target.value; Save.patchWorkItem(item, ['notes'], { debounce: true }); });
 
   // Top-right trash with light secondary confirmation.
   const trashBtn = pop.querySelector('[data-act="delete"]');
@@ -5378,6 +3910,7 @@ function openWorkItemPopover({ pid, item, defaultMember, defaultStart, defaultEn
     confirmEl.querySelector('[data-act="yes"]').addEventListener('click', e=>{
       e.stopPropagation();
       proj.items = proj.items.filter(x=> x.id !== item.id);
+      Save.deleteWorkItem(item);
       closePopover(pop);
       removeWorkItemUI(proj, item);
     });
@@ -5403,6 +3936,8 @@ function openWorkItemPopover({ pid, item, defaultMember, defaultStart, defaultEn
   pop.__scrim = scrim;
   __overlayStack.push(scrim);
 
+  pop.dataset.entity = 'workItem';
+  pop.dataset.entityId = item.id;
   positionPopover(pop, anchor);
   __overlayStack.push(pop);
   document.body.appendChild(pop);
@@ -5435,23 +3970,21 @@ function openTimeOffPopover({ memberName, leave, defaultDate, anchor }){
     // Add mode: create the leave up-front and push live so all edits are reflected.
     leave = {
       id: nid(),
-      date: defaultDate || dateToTuple(MOCK_TODAY),
+      userId: memberName,
+      date: defaultDate || todayISO(),
       type: 'full',
       category: 'vacation',
       notes: '',
+      version: 0,
     };
     list.push(leave);
+    Save.createTimeOff(leave);
     // Scoped refresh — only the affected team's heatmap row needs to redraw.
     // Full renderApp would rebuild the entire app (including ~3500 team-summary
     // cells across all teams) and force a ~80ms layout flush; we only need the
     // one team's summary to reflect the new leave.
     refreshTeamHeatmapDeferred(memberName);
     refreshMemberLaneHatches(memberName);
-  } else {
-    // Edit mode: backfill any missing fields on legacy entries (no id/category/notes).
-    if(!('id' in leave)) leave.id = nid();
-    if(!('category' in leave)) leave.category = 'vacation';
-    if(!('notes' in leave)) leave.notes = '';
   }
 
   const pop = document.createElement('div');
@@ -5479,15 +4012,22 @@ function openTimeOffPopover({ memberName, leave, defaultDate, anchor }){
   // Date input + visible button.
   const dateInp = pop.querySelector('[data-bind="date"]');
   const dateBtn = pop.querySelector('[data-bind="date-btn"]');
-  function fmtDate(t){ return tupleToInputValue(t).replace(/-/g, '/'); }
+  const fmtDate = fmtSlashDate;
   function syncDateBtn(){
-    dateInp.value = tupleToInputValue(leave.date);
+    dateInp.value = leave.date;
     dateBtn.textContent = fmtDate(leave.date);
   }
   syncDateBtn();
   dateInp.addEventListener('change', e=>{
-    const t = inputValueToTuple(e.target.value);
-    if(t){ leave.date = t; syncDateBtn(); refreshTeamHeatmapDeferred(memberName); refreshMemberLaneHatches(memberName); }
+    const t = (e.target.value || null);
+    if(!t) return;
+    // One time-off entry per person per day.
+    if((MEMBER_LEAVES[memberName] || []).some(l => l !== leave && l.date === t)){
+      showToast(`${userName(memberName)} already has time off on ${fmtShortDate(t)}.`, 'warn');
+      syncDateBtn();
+      return;
+    }
+    leave.date = t; Save.patchTimeOff(leave, ['date']); syncDateBtn(); refreshTeamHeatmapDeferred(memberName); refreshMemberLaneHatches(memberName);
   });
   dateBtn.addEventListener('click', ()=>{ try{ dateInp.showPicker?.(); }catch(_){} });
 
@@ -5534,6 +4074,7 @@ function openTimeOffPopover({ memberName, leave, defaultDate, anchor }){
     e.preventDefault();
     openPickDropdown(dayTypeBtn, TIME_OFF_DAY_TYPES, leave.type, val => {
       leave.type = val;
+      Save.patchTimeOff(leave, ['type']);
       syncDayType();
       refreshTeamHeatmapDeferred(memberName);
       refreshMemberLaneHatches(memberName);
@@ -5551,6 +4092,7 @@ function openTimeOffPopover({ memberName, leave, defaultDate, anchor }){
     e.preventDefault();
     openPickDropdown(catBtn, TIME_OFF_CATEGORIES, leave.category, val => {
       leave.category = val;
+      Save.patchTimeOff(leave, ['category']);
       syncCat();
       refreshTeamHeatmapDeferred(memberName);
     });
@@ -5562,6 +4104,7 @@ function openTimeOffPopover({ memberName, leave, defaultDate, anchor }){
   function autoGrow(ta){ ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
   notesEl.addEventListener('input', e=>{
     leave.notes = e.target.value;
+    Save.patchTimeOff(leave, ['notes'], { debounce: true });
     autoGrow(notesEl);
   });
   requestAnimationFrame(()=> autoGrow(notesEl));
@@ -5599,6 +4142,7 @@ function openTimeOffPopover({ memberName, leave, defaultDate, anchor }){
     confirmEl.querySelector('[data-act="yes"]').addEventListener('click', e=>{
       e.stopPropagation();
       MEMBER_LEAVES[memberName] = (MEMBER_LEAVES[memberName] || []).filter(x=> x.id !== leave.id);
+      Save.deleteTimeOff(leave);
       closePopover(pop);
       refreshTeamHeatmapDeferred(memberName);
       refreshMemberLaneHatches(memberName);
@@ -5623,6 +4167,8 @@ function openTimeOffPopover({ memberName, leave, defaultDate, anchor }){
   pop.__scrim = scrim;
   __overlayStack.push(scrim);
 
+  pop.dataset.entity = 'timeOff';
+  pop.dataset.entityId = leave.id;
   positionPopover(pop, anchor);
   __overlayStack.push(pop);
   document.body.appendChild(pop);
@@ -5692,8 +4238,8 @@ function rangeLabelFromIdx(sIdx, eIdx){
       const proj = findProject(pid);
       const item = findItem(pid, wi.dataset.wid);
       if(!proj || !item) return;
-      const sIdx = idxOf(item.start[0], item.start[1]);
-      const eIdx = idxOf(item.end[0], item.end[1]);
+      const sIdx = idxOf(item.start);
+      const eIdx = idxOf(item.end);
       down = {
         type: handle ? (handle.classList.contains('l') ? 'wi-resize-l' : 'wi-resize-r') : 'wi-move',
         el: wi, pid, item, startX: e.pageX, startY: e.pageY,
@@ -5790,8 +4336,8 @@ function rangeLabelFromIdx(sIdx, eIdx){
       // refresh is rAF-coalesced so a fast drag doesn't rebuild cells on
       // every mousemove (which can run faster than the display can paint).
       if(viewMode === 'team' && (s !== down._tmpS || ed !== down._tmpE)){
-        down.item.start = tupleFromTimelineIdx(s);
-        down.item.end   = tupleFromTimelineIdx(ed);
+        down.item.start = isoFromTimelineIdx(s);
+        down.item.end   = isoFromTimelineIdx(ed);
         refreshTeamHeatmapDeferred(down.item.who);
       }
       // Live-refresh the wi-hatch so OFF-day stripes appear/disappear and
@@ -5829,7 +4375,7 @@ function rangeLabelFromIdx(sIdx, eIdx){
         const msIdxs = proj.milestones.map(m=>
           String(m.id) === String(down.msObj.id)
             ? i
-            : idxOf(m.date[0], m.date[1])
+            : idxOf(m.date)
         );
         const range = projectTintRangeFromMs(proj, msIdxs);
         const left = `calc(${range.startIdx} * var(--day-w))`;
@@ -5875,13 +4421,15 @@ function rangeLabelFromIdx(sIdx, eIdx){
     if(d.type.startsWith('wi')){
       const s = d._tmpS ?? d.origS;
       const ed = d._tmpE ?? d.origE;
-      d.item.start = tupleFromTimelineIdx(s);
-      d.item.end   = tupleFromTimelineIdx(ed);
+      d.item.start = isoFromTimelineIdx(s);
+      d.item.end   = isoFromTimelineIdx(ed);
+      Save.patchWorkItem(d.item, ['start', 'end']);
       renderApp();
       relockSourceRowHover(lockSourceRow);
     } else if(d.type === 'ms-move'){
       const i = d._tmpIdx ?? d.origIdx;
-      d.msObj.date = tupleFromTimelineIdx(i);
+      d.msObj.date = isoFromTimelineIdx(i);
+      Save.patchMilestone(d.msObj, ['date']);
       renderApp();
     }
   }, true);
@@ -5983,6 +4531,891 @@ document.addEventListener('click', e=>{
   }
 });
 
-</script>
-</body>
-</html>
+/* ============================================================
+ *  Server sync
+ *
+ *  Saving: each edited thing (project, milestone, work item, time off) has
+ *  its own queue so its requests go out one at a time and in order. Text
+ *  fields are debounced; values are read when the request is sent, so the
+ *  latest text always wins. Each update carries the version we last saw; if
+ *  a teammate saved in between, the server answers 409 and we merge:
+ *    - they changed other fields  -> keep theirs, re-send ours (no fuss)
+ *    - they changed the same field -> keep theirs and tell the user
+ *
+ *  Receiving: the server streams every committed change (Server-Sent
+ *  Events). Changes newer than what we have are merged in, never touching
+ *  fields the user is still editing. After a dropped connection the browser
+ *  resumes from the last event id, so nothing is missed.
+ * ============================================================ */
+const CLIENT_ID = crypto.randomUUID();
+
+class ApiError extends Error {
+  constructor(status, body){
+    super((body && body.error) || (status ? `Request failed (${status})` : 'Could not reach the server.'));
+    this.status = status;
+    this.body = body || {};
+  }
+}
+let __redirectingToLogin = false;
+function goToLogin(){
+  if(__redirectingToLogin) return;
+  __redirectingToLogin = true;
+  location.href = '/login';
+}
+async function apiFetch(method, url, body){
+  let res;
+  try {
+    res = await fetch(url, {
+      method,
+      credentials: 'same-origin',
+      headers: {
+        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        'X-Requested-With': 'mission-control',
+        'X-Client-Id': CLIENT_ID,
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch(_){
+    throw new ApiError(0, { error: 'Could not reach the server. Check your connection.' });
+  }
+  let data = null;
+  try { data = await res.json(); } catch(_){}
+  if(res.status === 401){ goToLogin(); throw new ApiError(401, data); }
+  if(!res.ok) throw new ApiError(res.status, data);
+  return data;
+}
+
+/* ---------- entity metadata ---------- */
+const ENTITY = {
+  project:   { url: '/api/projects',   noun: 'project',   fields: ['title','key','status','tint','description','startDate','endDate','members'] },
+  milestone: { url: '/api/milestones', noun: 'milestone', fields: ['date','title','desc','type'] },
+  workItem:  { url: '/api/work-items', noun: 'work item', fields: ['who','start','end','label','notes','jira'] },
+  timeOff:   { url: '/api/time-off',   noun: 'time off',  fields: ['date','type','category','notes'] },
+};
+const FIELD_LABEL = {
+  title:'title', key:'Jira key', status:'status', tint:'color', description:'goals / notes', startDate:'start', endDate:'end',
+  members:'members', date:'date', desc:'notes', type:'type', who:'assignee', start:'start date', end:'end date',
+  label:'title', notes:'notes', jira:'Jira link', category:'category',
+};
+const clone = v => (v && typeof v === 'object') ? JSON.parse(JSON.stringify(v)) : v;
+const sameValue = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+
+/* Last state confirmed by the server for each local object (used to tell
+   "their change" from "our change" when a save conflicts). */
+const SERVER_COPY = new WeakMap();
+function rememberServerCopy(kind, obj, data){
+  const copy = { version: data.version };
+  ENTITY[kind].fields.forEach(f => { if(f in data) copy[f] = clone(data[f]); });
+  SERVER_COPY.set(obj, copy);
+}
+
+/* ---------- lookups by id ---------- */
+function findProjectById(id){ return PROJECTS.find(p => p.id === id) || null; }
+function findMilestoneById(id){
+  for(const p of PROJECTS){ const ms = p.milestones.find(m => m.id === id); if(ms) return ms; }
+  return null;
+}
+function workItemList(item){
+  if(item.projectId){ const p = findProjectById(item.projectId); return p ? p.items : null; }
+  return TEAM_OTHERS[item.who] || (TEAM_OTHERS[item.who] = []);
+}
+function findWorkItemById(id){
+  for(const p of PROJECTS){ const it = p.items.find(x => x.id === id); if(it) return it; }
+  for(const list of Object.values(TEAM_OTHERS)){ const it = list.find(x => x.id === id); if(it) return it; }
+  return null;
+}
+function findTimeOffById(id){
+  for(const list of Object.values(MEMBER_LEAVES)){ const l = list.find(x => x.id === id); if(l) return l; }
+  return null;
+}
+function findLocal(kind, id){
+  return kind === 'project' ? findProjectById(id)
+    : kind === 'milestone' ? findMilestoneById(id)
+    : kind === 'workItem' ? findWorkItemById(id)
+    : kind === 'timeOff' ? findTimeOffById(id) : null;
+}
+
+/* ---------- building local objects from server data ---------- */
+function projectFromServer(d, expandedIds){
+  const p = {
+    id: d.id, title: d.title, key: d.key, status: d.status, tint: d.tint, description: d.description || '',
+    startDate: clone(d.startDate), endDate: clone(d.endDate),
+    members: d.members.map(m => ({ ...m })),
+    milestones: [], items: [],
+    expanded: expandedIds ? expandedIds.has(d.id) : false,
+    version: d.version,
+  };
+  rememberServerCopy('project', p, d);
+  return p;
+}
+function localFromServer(kind, d){
+  const obj = { ...clone(d) };
+  rememberServerCopy(kind, obj, d);
+  return obj;
+}
+function insertLocal(kind, d){
+  if(kind === 'project'){
+    const p = projectFromServer(d, null);
+    PROJECTS.push(p);
+    (d.milestones || []).forEach(ms => insertLocal('milestone', ms));
+    return p;
+  }
+  if(kind === 'milestone'){
+    const p = findProjectById(d.projectId); if(!p) return null;
+    const ms = localFromServer(kind, d); p.milestones.push(ms); return ms;
+  }
+  if(kind === 'workItem'){
+    const obj = localFromServer(kind, d);
+    const list = workItemList(obj); if(!list) return null;
+    list.push(obj); return obj;
+  }
+  if(kind === 'timeOff'){
+    const obj = localFromServer(kind, d);
+    (MEMBER_LEAVES[d.userId] || (MEMBER_LEAVES[d.userId] = [])).push(obj);
+    return obj;
+  }
+  return null;
+}
+function removeLocal(kind, obj){
+  if(!obj) return false;
+  if(kind === 'project'){
+    const i = PROJECTS.indexOf(obj); if(i < 0) return false;
+    PROJECTS.splice(i, 1); return true;
+  }
+  if(kind === 'milestone'){
+    const p = findProjectById(obj.projectId); if(!p) return false;
+    const n = p.milestones.length; p.milestones = p.milestones.filter(m => m !== obj); return p.milestones.length !== n;
+  }
+  if(kind === 'workItem'){
+    if(obj.projectId){
+      const p = findProjectById(obj.projectId); if(!p) return false;
+      const n = p.items.length; p.items = p.items.filter(x => x !== obj); return p.items.length !== n;
+    }
+    for(const uid of Object.keys(TEAM_OTHERS)){
+      const n = TEAM_OTHERS[uid].length;
+      TEAM_OTHERS[uid] = TEAM_OTHERS[uid].filter(x => x !== obj);
+      if(TEAM_OTHERS[uid].length !== n) return true;
+    }
+    return false;
+  }
+  if(kind === 'timeOff'){
+    for(const uid of Object.keys(MEMBER_LEAVES)){
+      const n = MEMBER_LEAVES[uid].length;
+      MEMBER_LEAVES[uid] = MEMBER_LEAVES[uid].filter(x => x !== obj);
+      if(MEMBER_LEAVES[uid].length !== n) return true;
+    }
+  }
+  return false;
+}
+
+/* Merge authoritative server data into a local object. Ignores data that is
+   not newer than what we already have, and never overwrites a field the
+   user has unsaved edits in. Returns true when something visible changed. */
+function acceptServerData(kind, obj, data, { force = [] } = {}){
+  const known = SERVER_COPY.get(obj);
+  if(known && data.version <= known.version && !force.length) return false;
+  const q = SAVE_QUEUES.get(`${kind}:${obj.id}`);
+  const dirty = new Set(q ? [...q.pending, ...q.inflight] : []);
+  force.forEach(f => dirty.delete(f));
+  const prevWho = obj.who;
+  let changed = false;
+  ENTITY[kind].fields.forEach(f => {
+    if(!(f in data) || dirty.has(f)) return;
+    if(sameValue(obj[f], data[f])) return;
+    obj[f] = clone(data[f]);
+    changed = true;
+  });
+  if(!known || data.version > known.version || force.length){
+    obj.version = Math.max(obj.version || 0, data.version);
+    rememberServerCopy(kind, obj, data);
+  }
+  // An "Others" work item handed to someone else moves to their row.
+  if(kind === 'workItem' && !obj.projectId && prevWho !== obj.who){
+    if(TEAM_OTHERS[prevWho]) TEAM_OTHERS[prevWho] = TEAM_OTHERS[prevWho].filter(x => x !== obj);
+    (TEAM_OTHERS[obj.who] || (TEAM_OTHERS[obj.who] = [])).push(obj);
+  }
+  return changed;
+}
+
+/* ---------- save queues ---------- */
+const SAVE_QUEUES = new Map();
+const DEBOUNCE_MS = 500;
+let __savesOutstanding = 0;
+let __offline = false;
+
+function saveQueue(kind, obj){
+  const key = `${kind}:${obj.id}`;
+  let q = SAVE_QUEUES.get(key);
+  if(!q){
+    q = { key, kind, obj, chain: Promise.resolve(), pending: new Set(), inflight: new Set(), timer: null, deleted: false, cancelled: false };
+    SAVE_QUEUES.set(key, q);
+  }
+  q.obj = obj;
+  return q;
+}
+function isTransient(err){ return err.status === 0 || err.status === 502 || err.status === 503 || err.status === 504; }
+function enqueue(q, what, fn, attempt = 0){
+  __savesOutstanding++;
+  updateFooter();
+  q.chain = q.chain.then(async ()=>{
+    if(q.cancelled) return;
+    try {
+      await fn();
+      if(__offline){ __offline = false; updateFooter(); }
+    } catch(err){
+      if(isTransient(err) && attempt < 10){
+        // Network hiccup or deploy in progress: keep the change and try again.
+        __offline = true;
+        const delay = Math.min(30000, 1000 * 2 ** attempt);
+        setTimeout(()=> enqueue(q, what, fn, attempt + 1), delay);
+        return;
+      }
+      handleSaveError(q, err, what);
+    }
+  }).finally(()=>{
+    __savesOutstanding--;
+    updateFooter();
+  });
+  return q.chain;
+}
+
+function schedulePatch(kind, obj, fields, { debounce = false } = {}){
+  if(!obj || !obj.id) return;
+  const q = saveQueue(kind, obj);
+  if(q.deleted) return;
+  fields.forEach(f => q.pending.add(f));
+  clearTimeout(q.timer);
+  q.timer = null;
+  if(debounce){
+    q.timer = setTimeout(()=>{ q.timer = null; enqueueFlush(q); }, DEBOUNCE_MS);
+    updateFooter();
+  } else {
+    enqueueFlush(q);
+  }
+}
+function enqueueFlush(q){
+  return enqueue(q, `save your change to this ${ENTITY[q.kind].noun}`, ()=> flushFields(q));
+}
+async function flushFields(q){
+  const fields = [...q.pending];
+  q.pending.clear();
+  if(!fields.length || q.deleted) return;
+  const obj = q.obj, meta = ENTITY[q.kind];
+  fields.forEach(f => q.inflight.add(f));
+  try {
+    if(q.kind === 'project' && fields.includes('members')){
+      const res = await apiFetch('PUT', `${meta.url}/${obj.id}/members`, {
+        members: obj.members.map(m => ({ userId: m.userId, role: m.role })),
+      });
+      q.inflight.delete('members');
+      // Adopt the server's member ids so later edits refer to the same rows.
+      if(sameValue(obj.members.map(m => m.userId), res.members.map(m => m.userId))) obj.members = res.members.map(m => ({ ...m }));
+      if(acceptServerData('project', obj, res)) scheduleRemoteRender();
+    }
+    const rest = fields.filter(f => f !== 'members');
+    if(!rest.length) return;
+    const body = { version: obj.version };
+    rest.forEach(f => { body[f] = clone(obj[f]); });
+    let res;
+    try {
+      res = await apiFetch('PATCH', `${meta.url}/${obj.id}`, body);
+    } catch(err){
+      if(err.status === 409 && err.body && err.body.current){
+        resolveConflict(q, rest, err.body.current);
+        return;
+      }
+      if(isTransient(err)) rest.forEach(f => q.pending.add(f));
+      throw err;
+    }
+    rest.forEach(f => q.inflight.delete(f));
+    if(acceptServerData(q.kind, obj, res)) scheduleRemoteRender();
+  } finally {
+    fields.forEach(f => q.inflight.delete(f));
+  }
+}
+/* Someone saved this item after we last heard from the server. */
+function resolveConflict(q, fields, current){
+  const obj = q.obj, base = SERVER_COPY.get(obj) || {};
+  // Fields they changed since we last heard from the server.
+  const theirs = fields.filter(f => !sameValue(current[f], base[f]));
+  const retry = fields.filter(f => !theirs.includes(f));
+  fields.forEach(f => q.inflight.delete(f));
+  // Our other fields stay "dirty" so the merge below can't overwrite them.
+  retry.forEach(f => q.pending.add(f));
+  // Take everything they changed; where both edited the same field, keep
+  // theirs, since ours never reached the server.
+  acceptServerData(q.kind, obj, current, { force: theirs });
+  theirs.forEach(f => q.pending.delete(f));
+  if(theirs.length){
+    const names = theirs.map(f => FIELD_LABEL[f] || f).join(', ');
+    showToast(`Someone else changed this ${ENTITY[q.kind].noun}'s ${names} at the same moment. Their version was kept — please check it.`, 'warn');
+    refreshOpenPopoverFields(q.kind, obj);
+    refreshOpenEditors();
+  }
+  scheduleRemoteRender();
+  if(retry.length) enqueueFlush(q);
+}
+function handleSaveError(q, err, what){
+  if(err.status === 401) return;
+  if(err.status === 404){
+    // Deleted by someone else while we were editing it.
+    q.cancelled = true;
+    SAVE_QUEUES.delete(q.key);
+    if(removeLocal(q.kind, q.obj)) scheduleRemoteRender();
+    closeOrphanedOverlays();
+    showToast(`This ${ENTITY[q.kind].noun} was deleted by someone else, so your change could not be saved.`, 'warn');
+    return;
+  }
+  showToast(`Couldn't ${what}: ${err.message}`, 'error');
+  resyncAll();
+}
+
+const Save = {
+  createProject(p){
+    const q = saveQueue('project', p);
+    enqueue(q, 'add the project', async ()=>{
+      const res = await apiFetch('POST', ENTITY.project.url, {
+        id: p.id, title: p.title, key: p.key, status: p.status, tint: p.tint, description: p.description || '',
+        startDate: p.startDate, endDate: p.endDate,
+        members: p.members.map(m => ({ userId: m.userId, role: m.role })),
+        milestones: p.milestones.map(ms => ({ id: ms.id, date: ms.date, title: ms.title, desc: ms.desc || '', type: ms.type })),
+      });
+      p.members = res.project.members.map(m => ({ ...m }));
+      acceptServerData('project', p, res.project);
+      res.milestones.forEach(sm => {
+        const lm = p.milestones.find(m => m.id === sm.id);
+        if(lm){ lm.projectId = p.id; acceptServerData('milestone', lm, sm); }
+      });
+    });
+  },
+  patchProject(p, fields, opts){ if(!p.__draft) schedulePatch('project', p, fields, opts); },
+  putMembers(p){ if(!p.__draft) schedulePatch('project', p, ['members']); },
+  deleteProject(p){
+    // Its milestones and work items go with it; drop any edits still queued for them.
+    for(const q of SAVE_QUEUES.values()){
+      if(q.obj && q.obj.projectId === p.id){ q.cancelled = true; clearTimeout(q.timer); SAVE_QUEUES.delete(q.key); }
+    }
+    deleteEntity('project', p);
+  },
+  reorderProjects(){
+    const q = saveQueue('order', { id: 'projects' });
+    enqueue(q, 'save the project order', async ()=>{
+      await apiFetch('PUT', '/api/projects/order', { ids: PROJECTS.map(p => p.id) });
+    });
+  },
+
+  createMilestone(ms){ createEntity('milestone', ms, { id: ms.id, projectId: ms.projectId, date: ms.date, title: ms.title, desc: ms.desc, type: ms.type }); },
+  patchMilestone(ms, fields, opts){ schedulePatch('milestone', ms, fields, opts); },
+  deleteMilestone(ms){ deleteEntity('milestone', ms); },
+
+  createWorkItem(it){ createEntity('workItem', it, { id: it.id, projectId: it.projectId, who: it.who, start: it.start, end: it.end, label: it.label, notes: it.notes, jira: it.jira }); },
+  patchWorkItem(it, fields, opts){ schedulePatch('workItem', it, fields, opts); },
+  deleteWorkItem(it){ deleteEntity('workItem', it); },
+
+  createTimeOff(l){ createEntity('timeOff', l, { id: l.id, userId: l.userId, date: l.date, type: l.type, category: l.category, notes: l.notes }); },
+  patchTimeOff(l, fields, opts){ schedulePatch('timeOff', l, fields, opts); },
+  deleteTimeOff(l){ deleteEntity('timeOff', l); },
+
+  /* Send every debounced edit now (before signing out / leaving the page). */
+  async flushAll(){
+    for(const q of SAVE_QUEUES.values()){
+      if(q.timer){ clearTimeout(q.timer); q.timer = null; enqueueFlush(q); }
+    }
+    await Promise.all([...SAVE_QUEUES.values()].map(q => q.chain));
+  },
+  hasUnsaved(){
+    return __savesOutstanding > 0 || [...SAVE_QUEUES.values()].some(q => q.timer || q.pending.size);
+  },
+};
+function createEntity(kind, obj, body){
+  const q = saveQueue(kind, obj);
+  enqueue(q, `add the ${ENTITY[kind].noun}`, async ()=>{
+    // Send current values — the user may have typed since this was queued.
+    Object.keys(body).forEach(k => { if(k in obj) body[k] = clone(obj[k]); });
+    const res = await apiFetch('POST', ENTITY[kind].url, body);
+    acceptServerData(kind, obj, res);
+  });
+}
+function deleteEntity(kind, obj){
+  const q = saveQueue(kind, obj);
+  clearTimeout(q.timer);
+  q.timer = null;
+  q.pending.clear();
+  q.deleted = true;
+  enqueue(q, `delete the ${ENTITY[kind].noun}`, async ()=>{
+    await apiFetch('DELETE', `${ENTITY[kind].url}/${obj.id}`);
+    SAVE_QUEUES.delete(q.key);
+  });
+}
+
+/* ---------- full reload (after errors or a long disconnect) ---------- */
+let __resyncing = null;
+function resyncAll(){
+  if(__resyncing) return __resyncing;
+  __resyncing = (async ()=>{
+    for(const q of SAVE_QUEUES.values()){ q.cancelled = true; clearTimeout(q.timer); }
+    SAVE_QUEUES.clear();
+    try {
+      const state = await apiFetch('GET', '/api/state');
+      applyState(state);
+      closeAllOverlays();
+      onCalendarChanged();
+    } catch(err){
+      showToast(`Couldn't reload the board: ${err.message}`, 'error');
+    } finally {
+      __resyncing = null;
+    }
+  })();
+  return __resyncing;
+}
+
+function applyState(state){
+  ME = state.me;
+  USERS.clear();
+  state.users.forEach(u => USERS.set(u.id, u));
+  if(state.settings && state.settings.sprint) SPRINT = state.settings.sprint;
+  const expanded = loadExpandedIds();
+  PROJECTS = state.projects.map(p => projectFromServer(p, expanded));
+  TEAM_OTHERS = Object.create(null);
+  MEMBER_LEAVES = Object.create(null);
+  state.milestones.forEach(ms => insertLocal('milestone', ms));
+  state.workItems.forEach(it => insertLocal('workItem', it));
+  state.timeOff.forEach(l => insertLocal('timeOff', l));
+  __lastEventId = state.lastEventId;
+  __lastChange = state.lastChange;
+}
+
+/* ---------- realtime stream ---------- */
+let __lastEventId = 0;
+let __lastChange = null;
+let __conn = 'connecting'; // 'connecting' | 'live' | 'reconnecting'
+let __eventSource = null;
+
+function connectEvents(){
+  if(__eventSource) __eventSource.close();
+  const es = new EventSource(`/api/events?since=${__lastEventId}`);
+  __eventSource = es;
+  es.addEventListener('open', ()=>{ __conn = 'live'; updateFooter(); });
+  es.addEventListener('change', e=>{
+    try { applyRemoteEvent(JSON.parse(e.data)); }
+    catch(err){ console.error('Could not apply change', err); resyncAll(); }
+  });
+  es.addEventListener('resync', ()=>{ Save.flushAll().finally(resyncAll); });
+  es.addEventListener('signed-out', ()=>{ es.close(); goToLogin(); });
+  es.addEventListener('error', ()=>{
+    __conn = 'reconnecting';
+    updateFooter();
+    if(es.readyState === EventSource.CLOSED){
+      // The browser gave up (e.g. the session ended). Check, then reconnect.
+      setTimeout(async ()=>{
+        try { await apiFetch('GET', '/api/activity?limit=1'); } catch(_){ /* 401 redirects */ }
+        if(!__redirectingToLogin) connectEvents();
+      }, 3000);
+    }
+  });
+}
+
+function applyRemoteEvent(ev){
+  if(ev.id <= __lastEventId) return;
+  __lastEventId = ev.id;
+  __lastChange = { at: ev.at, actorId: ev.actorId };
+  const mine = ev.clientId === CLIENT_ID;
+  let changed = false;
+  const kind = ev.entity;
+
+  if(ENTITY[kind]){
+    const obj = findLocal(kind, ev.entityId);
+    if(ev.op === 'delete'){
+      if(obj){
+        const q = SAVE_QUEUES.get(`${kind}:${obj.id}`);
+        if(q){ q.cancelled = true; clearTimeout(q.timer); SAVE_QUEUES.delete(q.key); }
+        changed = removeLocal(kind, obj);
+        if(changed && !mine) noteRemoteDeletion(kind, obj, ev);
+      }
+    } else if(obj){
+      changed = acceptServerData(kind, obj, ev.data);
+      if(kind === 'project' && ev.op === 'create'){
+        (ev.data.milestones || []).forEach(ms => {
+          const lm = findMilestoneById(ms.id);
+          if(lm) acceptServerData('milestone', lm, ms); else { insertLocal('milestone', ms); changed = true; }
+        });
+      }
+    } else {
+      // New to us (created by a teammate, or a create we only now hear about).
+      const q = SAVE_QUEUES.get(`${kind}:${ev.entityId}`);
+      if(!(q && q.deleted)) changed = !!insertLocal(kind, ev.data);
+    }
+  } else if(kind === 'projectOrder'){
+    if(!mine){
+      const ids = ev.data.ids || [];
+      const rank = p => { const i = ids.indexOf(p.id); return i === -1 ? ids.length : i; };
+      PROJECTS.sort((a,b)=> rank(a) - rank(b));
+      changed = true;
+    }
+  } else if(kind === 'user'){
+    USERS.set(ev.data.id, ev.data);
+    if(ME && ev.data.id === ME.id) ME = ev.data;
+    changed = true;
+    refreshAdminModal();
+  } else if(kind === 'settings'){
+    if(ev.data.sprint){ SPRINT = ev.data.sprint; onCalendarChanged(); }
+    refreshAdminModal();
+  }
+
+  updateFooter();
+  if(changed){
+    closeOrphanedOverlays();
+    if(!mine) refreshOpenEditors();
+    scheduleRemoteRender();
+  }
+}
+
+function noteRemoteDeletion(kind, obj, ev){
+  const who = userName(ev.actorId);
+  const openPop = document.querySelector(`.popover[data-entity="${kind}"][data-entity-id="${cssEscape(obj.id)}"]`);
+  if(openPop){
+    showToast(`${who} deleted this ${ENTITY[kind].noun}.`, 'warn');
+  } else if(kind === 'project' && String(__openPanelPid) === String(obj.id)){
+    showToast(`${who} deleted the project “${obj.title}”.`, 'warn');
+  }
+}
+
+/* Close any popover / panel whose subject no longer exists. */
+function closeOrphanedOverlays(){
+  document.querySelectorAll('.popover[data-entity]').forEach(pop => {
+    if(!findLocal(pop.dataset.entity, pop.dataset.entityId)) closePopover(pop);
+  });
+  if(__openPanelPid && !findProjectById(__openPanelPid) && document.querySelector('.modal.project-edit-modal')){
+    closeAllOverlays();
+  }
+}
+/* Refresh open editors that show data a teammate just changed. Inputs the
+   user is typing in are left alone. */
+function refreshOpenEditors(){
+  refreshOpenPanel();
+  const panel = document.querySelector('.modal.project-edit-modal');
+  const proj = __openPanelPid && findProjectById(__openPanelPid);
+  if(panel && proj){
+    const t = panel.querySelector('[data-bind="title"]');
+    const d = panel.querySelector('[data-bind="desc"]');
+    if(t && document.activeElement !== t && t.value !== proj.title) t.value = proj.title;
+    if(d && document.activeElement !== d && d.value !== (proj.description || '')) d.value = proj.description || '';
+  }
+}
+
+/* After a conflict, show the kept value in an open popover's text boxes. */
+function refreshOpenPopoverFields(kind, obj){
+  const pop = document.querySelector(`.popover[data-entity="${kind}"][data-entity-id="${cssEscape(obj.id)}"]`);
+  if(!pop) return;
+  const map = { milestone: { title: 'title', desc: 'desc' }, workItem: { label: 'label', notes: 'notes' }, timeOff: { notes: 'notes' } }[kind] || {};
+  Object.entries(map).forEach(([field, bind]) => {
+    const el = pop.querySelector(`[data-bind="${bind}"]`);
+    if(el && 'value' in el) el.value = obj[field] || '';
+  });
+}
+
+/* Re-render for remote changes, but never in the middle of a drag. */
+let __remoteRenderPending = false;
+function scheduleRemoteRender(){
+  if(__remoteRenderPending) return;
+  __remoteRenderPending = true;
+  requestAnimationFrame(flushDeferredRemoteRender);
+}
+function isUserDragging(){
+  const b = document.body.classList;
+  return b.contains('is-item-dragging') || b.contains('is-proj-dragging') || b.contains('is-member-dragging');
+}
+function flushDeferredRemoteRender(){
+  if(!__remoteRenderPending) return;
+  if(isUserDragging()) return; // picked up again on mouseup
+  __remoteRenderPending = false;
+  renderApp();
+  refreshOpenPanel();
+}
+document.addEventListener('mouseup', ()=> setTimeout(flushDeferredRemoteRender, 0));
+
+/* Sprint settings changed or the date rolled over. */
+function onCalendarChanged(){
+  rebuildTimeline();
+  const label = document.getElementById('sprintRange');
+  if(label) label.textContent = currentSprintLabel();
+  if(document.getElementById('boardScroll')) renderApp();
+}
+
+/* ---------- footer status ---------- */
+function fmtDateTime(iso){
+  const d = new Date(iso);
+  if(Number.isNaN(d.getTime())) return '';
+  const p = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+function footerStatusHtml(){
+  const conn = __offline || __conn === 'reconnecting'
+    ? `<span class="sync-dot is-off"></span>${__offline ? 'Offline — will retry' : 'Reconnecting…'}`
+    : __conn === 'live'
+      ? `<span class="sync-dot is-live"></span>Live`
+      : `<span class="sync-dot"></span>Connecting…`;
+  const saving = Save.hasUnsaved() ? 'Saving…' : 'All changes saved';
+  const last = __lastChange && __lastChange.at
+    ? ` · Last change ${escape(fmtDateTime(__lastChange.at))}${__lastChange.actorId ? ` by ${escape(userName(__lastChange.actorId))}` : ''}`
+    : '';
+  return `${conn} · ${saving}${last}`;
+}
+function updateFooter(){
+  const el = document.getElementById('footerStatus');
+  if(el) el.innerHTML = footerStatusHtml();
+}
+window.addEventListener('beforeunload', e=>{
+  if(!Save.hasUnsaved()) return;
+  Save.flushAll();
+  e.preventDefault();
+  e.returnValue = '';
+});
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'hidden') Save.flushAll();
+});
+
+/* ---------- toasts ---------- */
+function showToast(message, kind = 'info'){
+  let stack = document.querySelector('.toast-stack');
+  if(!stack){
+    stack = document.createElement('div');
+    stack.className = 'toast-stack';
+    stack.setAttribute('role', 'status');
+    stack.setAttribute('aria-live', 'polite');
+    document.body.appendChild(stack);
+  }
+  const t = document.createElement('div');
+  t.className = `toast is-${kind}`;
+  t.textContent = message;
+  t.title = 'Click to dismiss';
+  t.addEventListener('click', ()=> t.remove());
+  stack.appendChild(t);
+  setTimeout(()=> t.remove(), kind === 'info' ? 5000 : 9000);
+}
+
+/* ============================================================
+ *  Recent changes (activity log)
+ * ============================================================ */
+function describeEvent(ev){
+  const who = ev.actorId ? userName(ev.actorId) : 'Someone';
+  const d = ev.data || {};
+  const verb = ev.op === 'create' ? 'added' : ev.op === 'delete' ? 'deleted' : 'updated';
+  const projTitle = pid => { const p = pid && findProjectById(pid); return p ? `“${p.title}”` : (pid ? 'a deleted project' : 'Others'); };
+  let what = '';
+  switch(ev.entity){
+    case 'project':   what = `project “${d.title || ''}”`; break;
+    case 'milestone': what = `milestone “${msDisplayTitle(d)}” in ${projTitle(d.projectId)}`; break;
+    case 'workItem':  what = `work item “${d.label || 'Work item'}” (${userName(d.who)}) in ${projTitle(d.projectId)}`; break;
+    case 'timeOff':   what = `time off for ${userName(d.userId)} on ${d.date ? fmtShortDate(d.date) : ''}`; break;
+    case 'user':      what = `person ${d.name || ''}`; break;
+    case 'settings':  what = 'sprint settings'; break;
+    default:          what = ev.entity;
+  }
+  const details = [];
+  const ch = ev.changes || {};
+  const show = v => {
+    if(v === null || v === undefined || v === '') return '—';
+    const s = typeof v === 'string' ? v : JSON.stringify(v);
+    return s.length > 40 ? s.slice(0, 40) + '…' : s;
+  };
+  Object.entries(ch).forEach(([col, pair])=>{
+    if(!Array.isArray(pair)) return;
+    const [a, b] = pair;
+    if(col === 'members'){
+      const names = list => (list || []).map(m => userName(m.userId)).join(', ');
+      details.push(`members: ${names(b)}`);
+    } else if(col === 'user_id'){
+      details.push(`assignee: ${userName(a)} → ${userName(b)}`);
+    } else if(col === 'description' || col === 'notes'){
+      details.push('edited notes');
+    } else {
+      const label = { jira_key:'Jira key', start_date:'start', end_date:'end', start_mode:'start', end_mode:'end', day_type:'day' }[col] || col;
+      details.push(`${label}: ${show(a)} → ${show(b)}`);
+    }
+  });
+  return { who, text: `${verb} ${what}`, details };
+}
+
+async function openActivityModal(){
+  closeAllOverlays();
+  const scrim = buildScrim();
+  const modal = document.createElement('div');
+  modal.className = 'modal activity-modal';
+  modal.innerHTML = `
+    <div class="modal-head">
+      <div class="modal-title">Recent changes</div>
+      <button class="modal-close" aria-label="Close"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 2l7 7M9 2l-7 7"/></svg></button>
+    </div>
+    <div class="modal-body"><div class="activity-list"><div class="activity-empty">Loading…</div></div></div>
+    <div class="modal-foot"><button class="btn-secondary" data-act="more" style="display:none">Load older</button><button class="btn-primary" data-act="close">Close</button></div>`;
+  modal.querySelector('.modal-close').addEventListener('click', closeAllOverlays);
+  modal.querySelector('[data-act="close"]').addEventListener('click', closeAllOverlays);
+  scrim.appendChild(modal);
+  pushOverlay(scrim);
+  const list = modal.querySelector('.activity-list');
+  const moreBtn = modal.querySelector('[data-act="more"]');
+  let oldest = null;
+  async function load(){
+    moreBtn.disabled = true;
+    try {
+      const rows = await apiFetch('GET', `/api/activity?limit=50${oldest ? `&before=${oldest}` : ''}`);
+      if(oldest === null) list.innerHTML = '';
+      if(rows.length === 0 && oldest === null) list.innerHTML = '<div class="activity-empty">No changes yet.</div>';
+      rows.forEach(ev => {
+        const { who, text, details } = describeEvent(ev);
+        const row = document.createElement('div');
+        row.className = 'activity-row';
+        row.innerHTML = `
+          <span class="avatar" style="background:${ev.actorId ? avatarColor(ev.actorId) : '#bbb'}">${ev.actorId ? initials(ev.actorId) : '?'}</span>
+          <div class="activity-main">
+            <div><strong>${escape(who)}</strong> ${escape(text)}</div>
+            ${details.length ? `<div class="activity-details">${details.map(escape).join(' · ')}</div>` : ''}
+          </div>
+          <span class="activity-time">${escape(fmtDateTime(ev.at))}</span>`;
+        list.appendChild(row);
+      });
+      if(rows.length) oldest = rows[rows.length - 1].id;
+      moreBtn.style.display = rows.length === 50 ? '' : 'none';
+    } catch(err){
+      list.innerHTML = `<div class="activity-empty">${escape(err.message)}</div>`;
+    } finally {
+      moreBtn.disabled = false;
+    }
+  }
+  moreBtn.addEventListener('click', load);
+  load();
+}
+
+/* ============================================================
+ *  Admin: people + sprint settings
+ * ============================================================ */
+let __refreshAdmin = null;
+function refreshAdminModal(){ if(__refreshAdmin && document.querySelector('.admin-modal')) __refreshAdmin(); }
+
+function openAdminModal(){
+  closeAllOverlays();
+  const scrim = buildScrim();
+  const modal = document.createElement('div');
+  modal.className = 'modal admin-modal';
+  modal.innerHTML = `
+    <div class="modal-head">
+      <div class="modal-title">People &amp; sprint settings</div>
+      <button class="modal-close" aria-label="Close"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 2l7 7M9 2l-7 7"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="section-head" style="justify-content:flex-start">People</div>
+      <p class="admin-hint">Teammates are added automatically the first time they sign in with Google. Add someone here to assign work to them before that. Turning someone off hides them from pickers and signs them out; their past work stays on the board.</p>
+      <div class="people-list" data-bind="people"></div>
+      <form class="add-person" data-bind="add-person">
+        <input name="name" type="text" placeholder="Name" maxlength="120" required />
+        <input name="email" type="email" placeholder="name@arcsite.com" maxlength="254" required />
+        <button class="btn-secondary" type="submit">Add person</button>
+      </form>
+      <div class="section-head" style="justify-content:flex-start;margin-top:18px">Sprints</div>
+      <p class="admin-hint">Sprints are two work weeks long. Pick any Monday that starts a sprint and that sprint's number; every other sprint is counted from it.</p>
+      <form class="sprint-form" data-bind="sprint">
+        <div class="field"><label>Sprint start (a Monday)</label><input name="anchorDate" type="date" required /></div>
+        <div class="field"><label>Sprint number</label><input name="anchorNumber" type="number" min="0" step="1" required /></div>
+        <button class="btn-secondary" type="submit">Save sprints</button>
+      </form>
+    </div>
+    <div class="modal-foot"><button class="btn-primary" data-act="close">Done</button></div>`;
+  modal.querySelector('.modal-close').addEventListener('click', closeAllOverlays);
+  modal.querySelector('[data-act="close"]').addEventListener('click', closeAllOverlays);
+  scrim.appendChild(modal);
+  pushOverlay(scrim);
+
+  const peopleEl = modal.querySelector('[data-bind="people"]');
+  async function patchUser(uid, body){
+    try {
+      const u = await apiFetch('PATCH', `/api/users/${uid}`, body);
+      USERS.set(u.id, u);
+      if(ME && u.id === ME.id) ME = u;
+      renderPeople();
+      scheduleRemoteRender();
+    } catch(err){
+      showToast(err.message, 'error');
+      renderPeople();
+    }
+  }
+  function renderPeople(){
+    const users = [...USERS.values()].sort((a,b)=> (b.active - a.active) || a.name.localeCompare(b.name));
+    peopleEl.innerHTML = users.map(u => `
+      <div class="person-row${u.active ? '' : ' is-inactive'}" data-uid="${escape(u.id)}">
+        <span class="avatar" style="background:${avatarColor(u.id)}">${initials(u.id)}</span>
+        <input class="person-name" type="text" value="${escape(u.name)}" maxlength="120" aria-label="Name" />
+        <span class="person-email">${escape(u.email)}</span>
+        <label class="person-flag"><input type="checkbox" data-flag="isAdmin" ${u.isAdmin ? 'checked' : ''} ${u.id === ME.id ? 'disabled' : ''}/> Admin</label>
+        <label class="person-flag"><input type="checkbox" data-flag="active" ${u.active ? 'checked' : ''} ${u.id === ME.id ? 'disabled' : ''}/> Active</label>
+      </div>`).join('');
+    peopleEl.querySelectorAll('.person-row').forEach(row => {
+      const uid = row.dataset.uid;
+      const nameInp = row.querySelector('.person-name');
+      nameInp.addEventListener('change', ()=>{
+        const v = nameInp.value.trim();
+        if(v && v !== userName(uid)) patchUser(uid, { name: v }); else nameInp.value = userName(uid);
+      });
+      nameInp.addEventListener('keydown', e=>{ if(e.key === 'Enter') nameInp.blur(); });
+      row.querySelectorAll('input[data-flag]').forEach(cb => cb.addEventListener('change', ()=> patchUser(uid, { [cb.dataset.flag]: cb.checked })));
+    });
+  }
+  const addForm = modal.querySelector('[data-bind="add-person"]');
+  addForm.addEventListener('submit', async e=>{
+    e.preventDefault();
+    const fd = new FormData(addForm);
+    try {
+      const u = await apiFetch('POST', '/api/users', { name: String(fd.get('name')).trim(), email: String(fd.get('email')).trim() });
+      USERS.set(u.id, u);
+      addForm.reset();
+      renderPeople();
+    } catch(err){
+      showToast(err.message, 'error');
+    }
+  });
+  const sprintForm = modal.querySelector('[data-bind="sprint"]');
+  function fillSprint(){
+    if(sprintForm.contains(document.activeElement)) return;
+    sprintForm.anchorDate.value = SPRINT.anchorDate;
+    sprintForm.anchorNumber.value = SPRINT.anchorNumber;
+  }
+  sprintForm.addEventListener('submit', async e=>{
+    e.preventDefault();
+    try {
+      const settings = await apiFetch('PUT', '/api/settings/sprint', {
+        anchorDate: sprintForm.anchorDate.value,
+        anchorNumber: Number(sprintForm.anchorNumber.value),
+      });
+      SPRINT = settings.sprint;
+      onCalendarChanged();
+      showToast('Sprint settings saved.');
+    } catch(err){
+      showToast(err.message, 'error');
+    }
+  });
+  __refreshAdmin = ()=>{ renderPeople(); fillSprint(); };
+  __refreshAdmin();
+}
+
+/* ============================================================
+ *  Start-up
+ * ============================================================ */
+async function boot(){
+  const app = document.getElementById('app');
+  let state;
+  try {
+    state = await apiFetch('GET', '/api/state');
+  } catch(err){
+    if(err.status === 401) return;
+    app.innerHTML = `<div class="boot-msg"><div>Couldn't load Mission Control.</div><div class="boot-detail">${escape(err.message)}</div><button class="btn-secondary" id="bootRetry">Try again</button></div>`;
+    document.getElementById('bootRetry').addEventListener('click', ()=>{ app.innerHTML = '<div class="boot-msg">Loading Mission Control…</div>'; boot(); });
+    return;
+  }
+  applyState(state);
+  rebuildTimeline();
+  renderApp();
+  // Wait for mountBoard's deferred layout pass before scrolling.
+  requestAnimationFrame(()=> requestAnimationFrame(()=> scrollToToday(false)));
+  connectEvents();
+}
+boot();
