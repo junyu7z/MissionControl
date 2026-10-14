@@ -660,21 +660,25 @@ function deriveTeamData(){
     else if(!e.role && role){ e.role = role; }
     return e;
   }
+  function projectEntry(e, p){
+    let pe = e.projects.get(p.id);
+    if(!pe){ pe = { project: p, items: [] }; e.projects.set(p.id, pe); }
+    return pe;
+  }
   visibleProjects().forEach(p=>{
-    p.members.forEach(m => ensure(m.userId, m.role));
+    // Every project member gets a row for the project, even before they have
+    // any work items in it — so someone just added shows up right away.
+    p.members.forEach(m => projectEntry(ensure(m.userId, m.role), p));
     p.items.forEach(it=>{
       const role = (p.members.find(m=> m.userId === it.who) || {}).role;
-      const e = ensure(it.who, role);
-      let pe = e.projects.get(p.id);
-      if(!pe){ pe = { project: p, items: [] }; e.projects.set(p.id, pe); }
-      pe.items.push(it);
+      projectEntry(ensure(it.who, role), p).items.push(it);
     });
   });
   // Surface members who only have "Others" items (no board-tracked projects).
   Object.entries(TEAM_OTHERS).forEach(([uid, items])=>{
     if(items && items.length > 0) ensure(uid, '');
   });
-  // Drop members with zero items (project items OR Others items).
+  // Drop people with no projects and no Others items.
   const teams = Array.from(memberMap.values()).filter(e =>
     e.projects.size > 0 || (TEAM_OTHERS[e.uid] || []).length > 0
   );
